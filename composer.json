@@ -1,0 +1,34 @@
+{
+  "name": "fidesads/gridfs",
+  "description": "GridFS for eloquent",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Jure Bernava Prah",
+      "email": "webjure@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "extra": {
+    "laravel": {
+      "providers": [
+        "FidesAds\\GridFS\\GridFSServiceProvider"
+      ]
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "9.5.x-dev",
+    "illuminate/database": "5.7.19"
+  },
+  "autoload": {
+    "psr-4": {
+      "FidesAds\\GridFS\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "FidesAds\\GridFS\\Tests\\": "tests"
+    }
+  }
+}
