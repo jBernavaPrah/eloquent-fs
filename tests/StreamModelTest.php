@@ -1,15 +1,14 @@
 <?php
 
 
-namespace FidesAds\GridFS\Tests;
+namespace Tests;
 
 
-use FidesAds\GridFS\Models\File;
+use JBernavaPrah\EloquentFS\Models\File;
 
 
 class StreamModelTest extends TestCase
 {
-
 
     /**
      * @dataProvider writeModesProvider()
@@ -140,8 +139,6 @@ class StreamModelTest extends TestCase
     {
         $file = new File();
         fwrite($file->stream('w'), 'ABCD');
-
-        echo $mode;
 
         $readStream = $file->stream($mode);
 

@@ -1,6 +1,6 @@
 {
-  "name": "fidesads/gridfs",
-  "description": "GridFS for eloquent",
+  "name": "jbernavaprah/eloquent-fs",
+  "description": "Eloquent FileSystem, inspired by Mongo GridFS",
   "type": "library",
   "license": "MIT",
   "authors": [
@@ -10,14 +10,7 @@
     }
   ],
   "minimum-stability": "dev",
-  "extra": {
-    "laravel": {
-      "providers": [
-        "FidesAds\\GridFS\\GridFSServiceProvider"
-      ]
-    }
-  },
-  "require" : {
+  "require": {
     "php": "^7.3|^8.0",
     "illuminate/database": "^8.0"
   },
@@ -26,12 +19,12 @@
   },
   "autoload": {
     "psr-4": {
-      "FidesAds\\GridFS\\": "src"
+      "JBernavaPrah\\EloquentFS\\": "src"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "FidesAds\\GridFS\\Tests\\": "tests"
+      "Tests\\": "tests"
     }
   }
 }

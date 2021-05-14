@@ -1,15 +1,14 @@
 <?php
 
-namespace FidesAds\GridFS\Models;
+namespace JBernavaPrah\EloquentFS\Models;
 
-use FidesAds\GridFS\GridFs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class FileChuck
- * @package FidesAds\GridFS\Models
+ * @package JBernavaPrah\EloquentFS\Models
  *
  * @property string $id
  * @property-read File $file
@@ -26,9 +25,11 @@ class FileChunk extends Model
 
     protected $guarded = [];
 
+    static $defaultFileModel = File::class;
+
     public function file(): BelongsTo
     {
-        return $this->belongsTo(GridFs::$fileModel);
+        return $this->belongsTo(self::$defaultFileModel);
     }
 
 

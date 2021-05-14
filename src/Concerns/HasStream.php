@@ -1,35 +1,37 @@
 <?php
 
 
-namespace FidesAds\GridFS\Concerns;
+namespace JBernavaPrah\EloquentFS\Concerns;
 
 
-use FidesAds\GridFS\GridFSStreamWrapper;
+use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
+use Illuminate\Support\Str;
 
 trait HasStream
 {
 
     private $stream;
 
-    public static $defaultOpenFileMode = 'r+';
-
-    public static $defaultChunkSize = 261120;
 
     public static function bootHasStream()
     {
-        if (!in_array(GridFSStreamWrapper::$streamWrapperProtocol, stream_get_wrappers())) {
-            GridFSStreamWrapper::register();
+        if (!in_array(EloquentFSStreamWrapper::$streamWrapperProtocol, stream_get_wrappers())) {
+            EloquentFSStreamWrapper::register();
         }
 
     }
 
-    private function createPathForFile(self $file): string
+    protected function createPathForFile(self $file): string
     {
 
+        if (is_null($file->getKey())) {
+            $file->{$file->getKeyName()} = Str::random(32);
+        }
+
         return sprintf(
-            '%s://files/%s',
-            GridFSStreamWrapper::$streamWrapperProtocol,
-            urlencode($file->id ?? 'new')
+            '%s://%s',
+            EloquentFSStreamWrapper::$streamWrapperProtocol,
+            urlencode($file->getKey())
         );
     }
 
@@ -38,7 +40,7 @@ trait HasStream
 
         $path = $this->createPathForFile($this);
         $context = stream_context_create([
-            GridFSStreamWrapper::$streamWrapperProtocol => [
+            EloquentFSStreamWrapper::$streamWrapperProtocol => [
                 'file' => $this,
             ],
         ]);
@@ -46,29 +48,8 @@ trait HasStream
         return fopen($path, $mode, false, $context);
     }
 
-    /**
-     *
-     * @param $content
-     * @param string|null $filename
-     * @param int|null $chunkSize
-     * @return static
-     */
-    public static function createAndWrite($content, ?string $filename = null, ?int $chunkSize = null)
-    {
 
-        $file = new self();
-        $file->chunk_size = $chunkSize ?: self::$defaultChunkSize;
-        $file->filename = $filename;
-        $file->save();
-
-        $file->write($content);
-        $file->close();
-
-        return $file;
-
-    }
-
-    private function getCurrentStream()
+    protected function getStream()
     {
         if (!$this->stream) {
             $this->stream = $this->stream(self::$defaultOpenFileMode);
@@ -82,7 +63,7 @@ trait HasStream
 
         $length = $length ?: self::$defaultChunkSize;
 
-        return fread($this->getCurrentStream(), $length);
+        return fread($this->getStream(), $length);
     }
 
 
@@ -92,12 +73,17 @@ trait HasStream
      */
     public function write($content): int
     {
-        return fwrite($this->getCurrentStream(), $content);
+
+        var_dump($this);
+        die();
+
+        return fwrite($this->getStream(), $content);
     }
 
     public function close(): bool
     {
-        return fclose($this->getCurrentStream());
+
+        return fclose($this->getStream());
     }
 
 }

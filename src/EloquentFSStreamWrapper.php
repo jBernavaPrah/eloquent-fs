@@ -1,20 +1,21 @@
 <?php
 
 
-namespace FidesAds\GridFS;
+namespace JBernavaPrah\EloquentFS;
 
 
-use FidesAds\GridFS\Models\File;
-use FidesAds\GridFS\Models\FileChunk;
+use JBernavaPrah\EloquentFS\Models\File;
+use JBernavaPrah\EloquentFS\Models\FileChunk;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Stream wrapper for reading and writing a GridFS file.
+ * Stream wrapper for reading and writing a file on Eloquent.
  *
  * @internal
  */
-class GridFSStreamWrapper
+class EloquentFSStreamWrapper
 {
     /** @var resource|null Stream context (set by PHP) */
     public $context;
@@ -22,7 +23,7 @@ class GridFSStreamWrapper
     /**
      * @var string
      */
-    public static $streamWrapperProtocol = 'eloquent-gridfs';
+    public static $streamWrapperProtocol = 'eloquent-stream';
 
     /** @var string */
     private $mode;
@@ -56,40 +57,7 @@ class GridFSStreamWrapper
         $this->pointer = 0;
     }
 
-    private function isAppendMode(): bool
-    {
-        return in_array($this->mode, ['a', 'a+']);
-    }
 
-    private function isWriteMode(): bool
-    {
-        return in_array($this->mode, ['w', 'r+', 'w+', 'a', 'a+']);
-    }
-
-    private function isReadMode(): bool
-    {
-        return in_array($this->mode, ['r', 'r+', 'w+', 'a+']);
-    }
-
-    private function initializeFile(): bool
-    {
-
-        if (in_array($this->mode, ['w', 'w+'])) {
-
-            if ($created = $this->file->save()) {
-                $this->file->chunks()->delete();
-            }
-
-            return $created;
-        }
-
-        if (in_array($this->mode, ['a', 'a+'])) {
-            return $this->file->save();
-        }
-
-        return $this->file->exists;
-
-    }
 
     /**
      * Opens the stream.
@@ -130,17 +98,7 @@ class GridFSStreamWrapper
     }
 
     /**
-     * Return the stream's file document.
-     *
-     * @return File
-     */
-    public function getFile(): File
-    {
-        return $this->file;
-    }
-
-    /**
-     * Register the GridFS stream wrapper.
+     * Register the Eloquent stream wrapper.
      *
      */
     public static function register()
@@ -214,9 +172,125 @@ class GridFSStreamWrapper
         }
     }
 
+
+    /**
+     * Read bytes from the stream.
+     *
+     * Note: this method may return a string smaller than the requested length
+     * if data is not available to be read.
+     *
+     * @see http://php.net/manual/en/streamwrapper.stream-read.php
+     * @param integer $length Number of bytes to read
+     * @return string|bool
+     */
+    public function stream_read(int $length)
+    {
+
+        if (!$this->isReadMode() | $this->isClosed) {
+            return false;
+        }
+
+        try {
+            return $this->readBytes($length);
+        } catch (Throwable $e) {
+            if ($this->triggerErrors) {
+                trigger_error(sprintf('%s: %s', get_class($e), $e->getMessage()), E_USER_WARNING);
+            }
+
+            return false;
+        }
+    }
+
+    /**
+     * Seeks to specific location in a stream
+     *
+     * @see http://php.net/manual/en/streamwrapper.stream-seek.php
+     * @param integer $offset Stream offset to seek to
+     * @param integer $whence One of SEEK_SET, SEEK_CUR, or SEEK_END
+     * @return boolean True if the position was updated and false otherwise
+     */
+    public function stream_seek(int $offset, int $whence = SEEK_SET): bool
+    {
+
+
+        if (abs($offset) > $this->file->length) {
+            return false;
+        }
+
+        // case of seek_set
+        $newPosition = $offset;
+
+        switch ($whence) {
+            case SEEK_CUR:
+                $newPosition = $this->pointer + $offset;
+                break;
+            case SEEK_END:
+                $newPosition = $this->file->length + $offset;
+                break;
+        }
+
+
+        if ($newPosition < 0 || $newPosition > $this->file->length) {
+            return false;
+        }
+
+        $this->pointer = $newPosition;
+
+        return true;
+    }
+
+    /**
+     * Return information about the stream.
+     *
+     * @see http://php.net/manual/en/streamwrapper.stream-stat.php
+     * @return array
+     */
+    public function stream_stat(): array
+    {
+        $stat = [
+            0 => 0, 'dev' => 0,
+            1 => 0, 'ino' => 0,
+            2 => 0, 'mode' => 0,
+            3 => 0, 'nlink' => 0,
+            4 => 0, 'uid' => 0,
+            5 => 0, 'gid' => 0,
+            6 => -1, 'rdev' => -1,
+            7 => 0, 'size' => 0,
+            8 => 0, 'atime' => 0,
+            9 => 0, 'mtime' => 0,
+            10 => 0, 'ctime' => 0,
+            11 => -1, 'blksize' => -1,
+            12 => -1, 'blocks' => -1,
+        ];
+
+
+        $stat[2] = $stat['mode'] = $this->isReadMode() ? 0100444  // S_IFREG & S_IRUSR & S_IRGRP & S_IROTH
+            : 0100222; // S_IFREG & S_IWUSR & S_IWGRP & S_IWOTH
+        $stat[7] = $stat['size'] = $this->file->length;
+
+        $stat[9] = $stat['mtime'] = $this->file->updated_at->timestamp ?? 0;
+        $stat[10] = $stat['ctime'] = $this->file->created_at->timestamp ?? 0;
+
+        $stat[11] = $stat['blksize'] = $this->file->chunk_size ?? -1;
+
+        return $stat;
+    }
+
+    /**
+     * Return the current position of the stream.
+     *
+     * @see http://php.net/manual/en/streamwrapper.stream-tell.php
+     * @return integer The current position of the stream
+     */
+    public function stream_tell()
+    {
+        return $this->pointer;
+    }
+
+
     private function setBufferedChunk($position): Model
     {
-        return $this->bufferedChunk ?: $this->bufferedChunk = $this->file->chunks()->where('n', $position)->firstOrNew(['n' => $position]);
+        return $this->bufferedChunk ?: $this->bufferedChunk = $this->file->chunks()->where('n', $position)->firstOrNew(['n' => $position, 'id' => Str::random(64)]);
     }
 
     private function writeBytes(string $data): int
@@ -264,34 +338,6 @@ class GridFSStreamWrapper
 
     }
 
-    /**
-     * Read bytes from the stream.
-     *
-     * Note: this method may return a string smaller than the requested length
-     * if data is not available to be read.
-     *
-     * @see http://php.net/manual/en/streamwrapper.stream-read.php
-     * @param integer $length Number of bytes to read
-     * @return string|bool
-     */
-    public function stream_read(int $length)
-    {
-
-        if (!$this->isReadMode() | $this->isClosed) {
-            return false;
-        }
-
-        try {
-            return $this->readBytes($length);
-        } catch (Throwable $e) {
-            if ($this->triggerErrors) {
-                trigger_error(sprintf('%s: %s', get_class($e), $e->getMessage()), E_USER_WARNING);
-            }
-
-            return false;
-        }
-    }
-
     private function readBytes(int $length): string
     {
 
@@ -315,93 +361,41 @@ class GridFSStreamWrapper
         }
         return $data;
 
-
     }
 
-    /**
-     * Seeks to specific location in a stream
-     *
-     * @see http://php.net/manual/en/streamwrapper.stream-seek.php
-     * @param integer $offset Stream offset to seek to
-     * @param integer $whence One of SEEK_SET, SEEK_CUR, or SEEK_END
-     * @return boolean True if the position was updated and false otherwise
-     */
-    public function stream_seek(int $offset, int $whence = SEEK_SET): bool
+    private function isAppendMode(): bool
     {
-
-
-        if (abs($offset) > $this->file->length) {
-            return false;
-        }
-
-        // case of seek_set
-        $newPosition = $offset;
-
-        switch ($whence) {
-            case SEEK_CUR:
-                $newPosition = $this->pointer + $offset;
-                break;
-            case SEEK_END:
-                $newPosition = $this->file->length + $offset;
-                break;
-        }
-
-
-        if ($newPosition < 0 || $newPosition > $this->file->length) {
-            return false;
-        }
-
-        $this->pointer = $newPosition;
-
-        return true;
+        return in_array($this->mode, ['a', 'a+']);
     }
 
-    /**
-     * Return information about the stream.
-     *
-     * @see http://php.net/manual/en/streamwrapper.stream-stat.php
-     * @return array
-     */
-    public function stream_stat()
+    private function isWriteMode(): bool
     {
-        $stat = [
-            0 => 0, 'dev' => 0,
-            1 => 0, 'ino' => 0,
-            2 => 0, 'mode' => 0,
-            3 => 0, 'nlink' => 0,
-            4 => 0, 'uid' => 0,
-            5 => 0, 'gid' => 0,
-            6 => -1, 'rdev' => -1,
-            7 => 0, 'size' => 0,
-            8 => 0, 'atime' => 0,
-            9 => 0, 'mtime' => 0,
-            10 => 0, 'ctime' => 0,
-            11 => -1, 'blksize' => -1,
-            12 => -1, 'blocks' => -1,
-        ];
-
-
-        $stat[2] = $stat['mode'] = $this->isReadMode() ? 0100444  // S_IFREG & S_IRUSR & S_IRGRP & S_IROTH
-            : 0100222; // S_IFREG & S_IWUSR & S_IWGRP & S_IWOTH
-        $stat[7] = $stat['size'] = $this->file->length;
-
-        $stat[9] = $stat['mtime'] = $this->file->updated_at->timestamp ?? 0;
-        $stat[10] = $stat['ctime'] = $this->file->created_at->timestamp ?? 0;
-
-        $stat[11] = $stat['blksize'] = $this->file->chunk_size ?? -1;
-
-        return $stat;
+        return in_array($this->mode, ['w', 'r+', 'w+', 'a', 'a+']);
     }
 
-    /**
-     * Return the current position of the stream.
-     *
-     * @see http://php.net/manual/en/streamwrapper.stream-tell.php
-     * @return integer The current position of the stream
-     */
-    public function stream_tell()
+    private function isReadMode(): bool
     {
-        return $this->pointer;
+        return in_array($this->mode, ['r', 'r+', 'w+', 'a+']);
+    }
+
+    private function initializeFile(): bool
+    {
+
+        if (in_array($this->mode, ['w', 'w+'])) {
+
+            if ($created = $this->file->save()) {
+                $this->file->chunks()->delete();
+            }
+
+            return $created;
+        }
+
+        if (in_array($this->mode, ['a', 'a+'])) {
+            return $this->file->save();
+        }
+
+        return $this->file->exists;
+
     }
 
 

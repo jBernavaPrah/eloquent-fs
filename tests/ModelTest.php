@@ -1,10 +1,10 @@
 <?php
 
 
-namespace FidesAds\GridFS\Tests;
+namespace Tests;
 
 
-use FidesAds\GridFS\Models\File;
+use JBernavaPrah\EloquentFS\Models\File;
 
 
 class ModelTest extends TestCase
@@ -16,7 +16,9 @@ class ModelTest extends TestCase
 
         $content = str_pad('X', 12, 'X');
 
-        $file = File::createAndWrite($content, null, 3);
+        File::write($content);
+
+
         $this->assertEquals(4, $file->chunks()->count());
         foreach ($file->chunks() as $chunk) {
             $this->assertEquals('XXX', $chunk->data);

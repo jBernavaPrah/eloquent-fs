@@ -1,7 +1,7 @@
 <?php
 
 
-namespace FidesAds\GridFS\Exception;
+namespace JBernavaPrah\EloquentFS\Exception;
 
 
 class CorruptFileException extends \RuntimeException

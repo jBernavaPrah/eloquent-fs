@@ -1,10 +1,10 @@
 <?php
 
-namespace FidesAds\GridFS\Models;
+namespace JBernavaPrah\EloquentFS\Models;
 
 
 use Carbon\Carbon;
-use FidesAds\GridFS\Concerns\HasStream;
+use JBernavaPrah\EloquentFS\Concerns\HasStream;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,10 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Class File
- * @package FidesAds\GridFS\Models
+ * @package JBernavaPrah\EloquentFS\Models
  *
  * @property string $id
- * @property string|null $filename
  * @property-read  integer $length
  * @property integer $chunk_size
  * @property mixed|null $metadata
@@ -30,6 +29,12 @@ class File extends Model
 
     use SoftDeletes;
     use HasStream;
+
+    public static $defaultOpenFileMode = 'r+';
+
+    public static $defaultChunkSize = 261120;
+
+    public static $defaultModelFileChunk = FileChunk::class;
 
     protected $guarded = [];
 
@@ -68,7 +73,7 @@ class File extends Model
      */
     public function chunks(): HasMany
     {
-        return $this->hasMany(FileChunk::class);
+        return $this->hasMany(self::$defaultModelFileChunk);
     }
 
 
