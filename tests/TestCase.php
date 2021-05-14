@@ -3,26 +3,39 @@
 namespace FidesAds\GridFS\Tests;
 
 
-use FidesAds\GridFS\GridFSServiceProvider;
+use Illuminate\Database\Capsule\Manager as DB;
+use PHPUnit\Framework\TestCase as BaseTestCAse;
 
-class TestCase extends \Orchestra\Testbench\TestCase
+class TestCase extends BaseTestCAse
 {
-    public function setUp(): void
+    /**
+     * Create the tables this model needs for testing.
+     */
+    public function setUp() : void
     {
         parent::setUp();
-        // additional setup
+
+        $db = new DB();
+
+        $config = require __DIR__.'/config/database.php';
+
+        $db->addConnection($config[getenv('DATABASE') ?: 'sqlite']);
+        $db->setAsGlobal();
+        $db->bootEloquent();
+
+        $this->migrate();
+
     }
 
-    protected function getPackageProviders($app)
-    {
-        return [
-            GridFSServiceProvider::class,
-        ];
-    }
+    public function migrate(){
+        DB::schema()->dropAllTables();
 
-    protected function getEnvironmentSetUp($app)
-    {
-        // perform environment setup
+        $migration = require __DIR__ .'/../database/migrations/2021_05_12_094604_create_files_table.php';
+        $migration->up();
+
+        $migration = require __DIR__ .'/../database/migrations/2021_05_12_094622_create_file_chunks_table.php';
+        $migration->up();
+
     }
 }
 

@@ -1,55 +1,20 @@
 <?php
 
 
-namespace FidesAds\GridFS\Tests\Unit;
+namespace FidesAds\GridFS\Tests;
 
 
-use FidesAds\GridFS\GridFs;
 use FidesAds\GridFS\Models\File;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-use phpDocumentor\Reflection\Assets\CustomParam;
 
-class UnitTest extends \FidesAds\GridFS\Tests\TestCase
+
+class StreamModelTest extends TestCase
 {
 
-    use DatabaseMigrations;
-
-    function testCreateFile()
-    {
-
-        $content = str_pad('X', 12, 'X');
-
-        $file = File::write($content, 'filename.txt', 3);
-        $this->assertEquals(4, $file->chunks()->count());
-        foreach ($file->chunks() as $chunk) {
-            $this->assertEquals('XXX', $chunk->data);
-        }
-
-    }
-
-    function testCreateWithLessThatChunk()
-    {
-
-
-        $file = File::write('XX', 'filename.txt', 3);
-        $this->assertEquals(1, $file->chunks()->count());
-        $this->assertEquals('XX', $file->chunks()->first()->data);
-
-    }
-
-    function testCreateFileWithDefaults()
-    {
-        $file = File::write('XX');
-        $this->assertNull($file->filename);
-        $this->assertEquals(GridFs::$defaultChunkSize, $file->chunk_size);
-        $this->assertEquals(2, $file->length);
-    }
 
     /**
      * @dataProvider writeModesProvider()
      */
-    function testCreateModelIfNotExistsYetWhenMode($mode)
+    function testCreateModelIfNotExistsYetWhenModeRequireIt($mode)
     {
 
         $file = new File();
@@ -65,7 +30,7 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
     function testExceptionReadModeOnEmptyFile($mode)
     {
 
-        $this->expectException(\ErrorException::class);
+        $this->expectError();
         $file = new File();
         $file->stream($mode);
 
@@ -74,7 +39,7 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
     function testExceptionReadPlusModeOnEmptyFile()
     {
 
-        $this->expectException(\ErrorException::class);
+        $this->expectError();
         $file = new File();
         $file->stream('r+');
 
@@ -113,7 +78,7 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
         fwrite($file->stream('w'), 'AAAAAAAAAAAAA');
 
         $result = fread($file->stream($mode), 1000);
-        $this->assertEquals($mode != 'w+' ? 'AAAAAAAAAAAAA' : '', $result);;
+        $this->assertEquals($mode != 'w+' ? 'AAAAAAAAAAAAA' : '', $result);
 
     }
 
@@ -139,6 +104,70 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
 
     }
 
+
+    /**
+     * @dataProvider tellProvider
+     */
+    function testTell($mode, $position)
+    {
+
+        $file = new File();
+        fwrite($file->stream('w'), 'ABCD');
+
+        $this->assertEquals($position, ftell($file->stream($mode)));
+
+    }
+
+    /**
+     * @dataProvider tellProviderAfterReadOneCharacter
+     */
+    function testTellAfterReadOneCharacter($mode, $position)
+    {
+        $file = new File();
+
+        fwrite($file->stream('w'), 'ABCD');
+        $stream = $file->stream($mode);
+        fread($stream, 1);
+        $this->assertEquals($position, ftell($stream));
+
+    }
+
+    /**
+     * @dataProvider readModesProvider
+     * @dataProvider writeModesProvider
+     */
+    function testSeek($mode)
+    {
+        $file = new File();
+        fwrite($file->stream('w'), 'ABCD');
+
+        echo $mode;
+
+        $readStream = $file->stream($mode);
+
+        $this->assertEquals(-1, fseek($readStream, -1));
+        $this->assertEquals(-1, fseek($readStream, 5));
+        $this->assertEquals(-1, fseek($readStream, 1, SEEK_END));
+        $this->assertEquals(-1, fseek($readStream, -5, SEEK_END));
+        $this->assertEquals(-1, fseek($readStream, 5, SEEK_CUR));
+        $this->assertEquals(-1, fseek($readStream, -1, SEEK_CUR));
+
+        // the file is truncated, therefore is this fseek will always return -1 for w and w+
+        if (!in_array($mode, ['w', 'w+'])) {
+            $this->assertEquals(0, fseek($readStream, 1));
+            $this->assertEquals(0, fseek($readStream, 0));
+            $this->assertEquals(0, fseek($readStream, 4));
+
+            $this->assertEquals(0, fseek($readStream, 0, SEEK_END));
+            $this->assertEquals(0, fseek($readStream, -3, SEEK_END));
+
+            $this->assertEquals(0, fseek($readStream, 0));
+            $this->assertEquals(0, fseek($readStream, 3, SEEK_CUR));
+
+        }
+
+    }
+
     /**
      * @dataProvider writeModesProvider
      */
@@ -156,7 +185,6 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
         $this->assertEquals('ABCD', fread($file->stream('r'), 5));
 
     }
-
 
     /**
      * @dataProvider appendModeProviders
@@ -202,7 +230,7 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
     public function writeModesProvider(): array
     {
         return [
-            ['a'], ['a+'], ['w'], [ 'w+']
+            ['a'], ['a+'], ['w'], ['w+']
         ];
     }
 
@@ -231,6 +259,28 @@ class UnitTest extends \FidesAds\GridFS\Tests\TestCase
     {
         return [
             ['a'], ['a+']
+        ];
+    }
+
+    public function tellProvider(): array
+    {
+        return [
+            ['a', 0],
+            ['a+', 0],
+            ['r+', 0],
+            ['r', 0],
+            ['w', 0],
+            ['w+', 0],
+        ];
+    }
+
+    public function tellProviderAfterReadOneCharacter(): array
+    {
+        return [
+            ['a+', 1],
+            ['r+', 1],
+            ['r', 1],
+            ['w+', 0],
         ];
     }
 

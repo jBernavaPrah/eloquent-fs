@@ -4,7 +4,6 @@
 namespace FidesAds\GridFS;
 
 
-use DemeterChain\B;
 use FidesAds\GridFS\Models\File;
 use FidesAds\GridFS\Models\FileChunk;
 use Illuminate\Database\Eloquent\Model;
@@ -20,23 +19,32 @@ class GridFSStreamWrapper
     /** @var resource|null Stream context (set by PHP) */
     public $context;
 
-    public static string $streamWrapperProtocol = 'eloquent-gridfs';
+    /**
+     * @var string
+     */
+    public static $streamWrapperProtocol = 'eloquent-gridfs';
 
     /** @var string */
-    private string $mode;
+    private $mode;
 
-    private bool $triggerErrors = true;
+    private $triggerErrors = true;
 
-    private bool $isClosed = false;
+    private $isClosed = false;
 
-    private ?File $file;
+    /**
+     * @var File
+     */
+    private $file;
 
-    private ?int $pointer = 0;
+    /**
+     * @var int
+     */
+    private $pointer = 0;
 
     /**
      * @var Model|FileChunk|null
      */
-    private ?Model $bufferedChunk = null;
+    private $bufferedChunk = null;
 
     public function __destruct()
     {
@@ -90,10 +98,9 @@ class GridFSStreamWrapper
      * @param string $path Path to the file resource
      * @param string $mode Mode used to open the file ( "x"/"x+", "c"/"c+" and 'e' not are supported yet)
      * @param integer $options Additional flags set by the streams API
-     * @param string $openedPath Not used
      * @return boolean
      */
-    public function stream_open(string $path, string $mode, $options, &$openedPath): bool
+    public function stream_open(string $path, string $mode, $options): bool
     {
         $this->mode = $mode;
 
@@ -103,7 +110,7 @@ class GridFSStreamWrapper
 
         $context = stream_context_get_options($this->context);
         $this->file = $context[$protocol]['file'];
-        $this->file->chunk_size = $this->file->chunk_size ?: GridFs::$defaultChunkSize;
+        $this->file->chunk_size = $this->file->chunk_size ?: File::$defaultChunkSize;
 
         $this->triggerErrors = $options === STREAM_REPORT_ERRORS;
 
@@ -189,7 +196,7 @@ class GridFSStreamWrapper
      * @param string|null $data Data to write
      * @return integer The number of bytes written
      */
-    public function stream_write(?string $data)
+    public function stream_write(string $data)
     {
 
         if (!$this->isWriteMode() | $this->isClosed) {

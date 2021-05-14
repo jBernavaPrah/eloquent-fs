@@ -5,8 +5,6 @@ namespace FidesAds\GridFS\Models;
 
 use Carbon\Carbon;
 use FidesAds\GridFS\Concerns\HasStream;
-use FidesAds\GridFS\GridFs;
-use FidesAds\GridFS\GridFSStreamWrapper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -70,7 +68,7 @@ class File extends Model
      */
     public function chunks(): HasMany
     {
-        return $this->hasMany(GridFs::$fileChunkModel);
+        return $this->hasMany(FileChunk::class);
     }
 
 

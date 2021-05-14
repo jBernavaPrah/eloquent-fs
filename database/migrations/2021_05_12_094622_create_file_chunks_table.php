@@ -2,7 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Capsule\Manager as DB;
 
 return new class extends Migration {
     /**
@@ -12,7 +12,7 @@ return new class extends Migration {
      */
     public function up()
     {
-        Schema::create('file_chunks', function (Blueprint $table) {
+        DB::schema()->create('file_chunks', function (Blueprint $table) {
             //$table->string('id')->primary();
             $table->bigIncrements('id');
 
