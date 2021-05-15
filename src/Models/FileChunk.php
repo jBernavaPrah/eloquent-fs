@@ -22,10 +22,16 @@ class FileChunk extends Model
 {
 
     public $timestamps = false;
+    public $incrementing = false;
 
     protected $guarded = [];
 
     static $defaultFileModel = File::class;
+
+    protected $casts =[
+        'n' => 'integer'
+    ] ;
+
 
     public function file(): BelongsTo
     {

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use JBernavaPrah\EloquentFS\Exception\RuntimeException;
 
 /**
  * Class File
@@ -16,12 +17,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @property string $id
  * @property-read  integer $length
- * @property integer $chunk_size
+ * @property  integer $chunk_size
  * @property mixed|null $metadata
  *
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property Carbon|null $deleted_at
+ *
+ * @method resource open(string $mode) valid only r, r+, w, w+, a, a+
+ * @method int write(mixed $data)
+ * @method string read(?int $length = null)
+ * @method void close()
  *
  */
 class File extends Model
@@ -30,7 +36,9 @@ class File extends Model
     use SoftDeletes;
     use HasStream;
 
-    public static $defaultOpenFileMode = 'r+';
+    public $incrementing = false;
+
+    public static $defaultOpenFileMode = 'a+';
 
     public static $defaultChunkSize = 261120;
 
@@ -42,6 +50,7 @@ class File extends Model
     protected $casts = [
         'metadata' => 'json'
     ];
+
 
     public function getLengthAttribute()
     {
@@ -55,6 +64,7 @@ class File extends Model
         return ($this->chunk_size * $lastChunk->n) + strlen($lastChunk->data);
 
     }
+
 
     /**
      * todo: Implement filter by length

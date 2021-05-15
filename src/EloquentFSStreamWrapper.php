@@ -4,6 +4,7 @@
 namespace JBernavaPrah\EloquentFS;
 
 
+use JBernavaPrah\EloquentFS\Exception\CorruptFileException;
 use JBernavaPrah\EloquentFS\Models\File;
 use JBernavaPrah\EloquentFS\Models\FileChunk;
 use Illuminate\Database\Eloquent\Model;
@@ -58,7 +59,6 @@ class EloquentFSStreamWrapper
     }
 
 
-
     /**
      * Opens the stream.
      *
@@ -78,23 +78,14 @@ class EloquentFSStreamWrapper
 
         $context = stream_context_get_options($this->context);
         $this->file = $context[$protocol]['file'];
-        $this->file->chunk_size = $this->file->chunk_size ?: File::$defaultChunkSize;
 
         $this->triggerErrors = $options === STREAM_REPORT_ERRORS;
 
-        // 'r'	Open for reading only; place the file pointer at the beginning of the file.
-        //'r+'	Open for reading and writing; place the file pointer at the beginning of the file.
-        //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-        //'w+'	Open for reading and writing; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-        //'a'	Open for writing only; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() has no effect, writes are always appended.
-        //'a+'	Open for reading and writing; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() only affects the reading position, writes are always appended.
-
-        $initializedFile = $this->initializeFile();
-
-        if (!$initializedFile && $this->triggerErrors) {
-            trigger_error('File not exists yet. First create it.', E_USER_WARNING);
+        if ($this->file->chunk_size < 1) {
+            throw new CorruptFileException('file.chunk_size is not an integer >= 1');
         }
-        return $initializedFile;
+
+        return $this->initializeFile();
     }
 
     /**
@@ -187,6 +178,7 @@ class EloquentFSStreamWrapper
     {
 
         if (!$this->isReadMode() | $this->isClosed) {
+
             return false;
         }
 
@@ -290,7 +282,10 @@ class EloquentFSStreamWrapper
 
     private function setBufferedChunk($position): Model
     {
-        return $this->bufferedChunk ?: $this->bufferedChunk = $this->file->chunks()->where('n', $position)->firstOrNew(['n' => $position, 'id' => Str::random(64)]);
+
+        return $this->bufferedChunk ?: $this->bufferedChunk = $this->file
+            ->chunks()
+            ->firstOrNew(['n' => (integer)$position], ['id' => Str::random(64)]);
     }
 
     private function writeBytes(string $data): int
@@ -301,14 +296,8 @@ class EloquentFSStreamWrapper
 
         $pointer = $this->isAppendMode() ? $this->file->length + strlen($this->bufferedChunk->data ?? '') : $this->pointer;
 
-        $startFromChunkNumber = (integer)ceil($pointer / $this->file->chunk_size);
-        $positionOnChunkData = $startFromChunkNumber > 0 ? $pointer - (($startFromChunkNumber - 1) * $this->file->chunk_size) : 0;
-
-        // increment startFromChunkNumber if the current chunk is already full
-        if ($positionOnChunkData === $this->file->chunk_size) {
-            $startFromChunkNumber += 1;
-            $positionOnChunkData = 0;
-        }
+        $startFromChunkNumber = (integer)floor($pointer / $this->file->chunk_size);
+        $positionOnChunkData = $pointer - ($startFromChunkNumber * $this->file->chunk_size);
 
         $this->setBufferedChunk($startFromChunkNumber);
         $bytesRead = 0;
@@ -320,7 +309,7 @@ class EloquentFSStreamWrapper
             if (strlen($this->bufferedChunk->data) === $this->file->chunk_size) {
                 $this->bufferedChunk->save();
                 $this->bufferedChunk = null;
-                $this->setBufferedChunk(++$startFromChunkNumber);
+                $this->setBufferedChunk($startFromChunkNumber++);
             }
 
             $positionOnChunkData = 0;
@@ -341,18 +330,39 @@ class EloquentFSStreamWrapper
     private function readBytes(int $length): string
     {
 
-        $startFromChunkNumber = (integer)floor($this->pointer / $this->file->chunk_size);
-        $skipDataFromChunk = $this->pointer - ($startFromChunkNumber * $this->file->chunk_size);
+        $index = (integer)floor($this->pointer / $this->file->chunk_size);
+        $offset = $this->pointer - ($index * $this->file->chunk_size);
 
-        $chucks = $this->file->chunks()->where('n', '>=', $startFromChunkNumber)->orderBy('n')->lazy();
+        $numChunks = (integer)ceil($this->file->length / $this->file->chunk_size);
+        $expectedLastChunkSize = ($this->file->length - (($numChunks - 1) * $this->file->chunk_size));
+
+        $chunks = $this->file->chunks()->where('n', '>=', $index)
+            ->orderBy('n')
+            ->lazy();
 
         $data = '';
         /** @var FileChunk $chuck */
-        foreach ($chucks as $chuck) {
+        foreach ($chunks as $chuck) {
 
-            $dataRead = substr($chuck->data, $skipDataFromChunk, $length - strlen($data));
+            if ($index != $chuck->n) {
+                throw CorruptFileException::unexpectedIndex($chuck->n, $index);
+            }
+
+            $actualChunkSize = strlen($chuck->data);
+
+            $expectedChunkSize = $index === $numChunks - 1
+                ? $expectedLastChunkSize
+                : $this->file->chunk_size;
+
+            if ($actualChunkSize !== $expectedChunkSize) {
+
+                throw CorruptFileException::unexpectedSize($actualChunkSize, $expectedChunkSize);
+            }
+
+            $dataRead = substr($chuck->data, $offset, $length - strlen($data));
             $data .= $dataRead;
             $this->pointer += strlen($dataRead);
+            ++$index;
 
             if (strlen($data) === $length) {
                 break;
@@ -365,21 +375,33 @@ class EloquentFSStreamWrapper
 
     private function isAppendMode(): bool
     {
-        return in_array($this->mode, ['a', 'a+']);
+        return Str::startsWith($this->mode, 'a');
     }
 
     private function isWriteMode(): bool
     {
-        return in_array($this->mode, ['w', 'r+', 'w+', 'a', 'a+']);
+        return Str::startsWith($this->mode, ['w', 'r+', 'a']);
     }
 
     private function isReadMode(): bool
     {
-        return in_array($this->mode, ['r', 'r+', 'w+', 'a+']);
+        return Str::startsWith($this->mode, ['w+', 'r', 'a+']);
     }
 
     private function initializeFile(): bool
     {
+
+        // 'r'	Open for reading only; place the file pointer at the beginning of the file.
+        //'r+'	Open for reading and writing; place the file pointer at the beginning of the file.
+        //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
+        //'w+'	Open for reading and writing; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
+        //'a'	Open for writing only; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() has no effect, writes are always appended.
+        //'a+'	Open for reading and writing; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() only affects the reading position, writes are always appended.
+
+
+        if ($this->isAppendMode()) {
+            return $this->file->save();
+        }
 
         if (in_array($this->mode, ['w', 'w+'])) {
 
@@ -390,9 +412,12 @@ class EloquentFSStreamWrapper
             return $created;
         }
 
-        if (in_array($this->mode, ['a', 'a+'])) {
-            return $this->file->save();
+
+        // in read and read+
+        if (!$this->file->exists && $this->triggerErrors) {
+            trigger_error('File not exists yet. First create it.', E_USER_WARNING);
         }
+
 
         return $this->file->exists;
 

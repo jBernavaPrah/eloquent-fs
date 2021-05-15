@@ -24,6 +24,7 @@ class Migration extends \Illuminate\Database\Migrations\Migration
 
         DB::schema()->create('file_chunks', function (Blueprint $table) {
             $table->string('id')->primary();
+
             $table->integer('n');
 
             $table->string('file_id');

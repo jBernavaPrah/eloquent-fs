@@ -18,7 +18,7 @@ class StreamModelTest extends TestCase
 
         $file = new File();
         $this->assertFalse($file->exists);
-        $file->stream($mode);
+        $file->open($mode);
         $this->assertTrue($file->exists);
 
     }
@@ -31,7 +31,7 @@ class StreamModelTest extends TestCase
 
         $this->expectError();
         $file = new File();
-        $file->stream($mode);
+        $file->open($mode);
 
     }
 
@@ -40,7 +40,7 @@ class StreamModelTest extends TestCase
 
         $this->expectError();
         $file = new File();
-        $file->stream('r+');
+        $file->open('r+');
 
     }
 
@@ -53,9 +53,9 @@ class StreamModelTest extends TestCase
 
 
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
-        $file->stream($mode);
+        $file->open($mode);
 
         if (in_array($mode, ['w', 'w+'])) {
             $this->assertEquals(0, $file->length);
@@ -74,9 +74,9 @@ class StreamModelTest extends TestCase
     {
 
         $file = new File();
-        fwrite($file->stream('w'), 'AAAAAAAAAAAAA');
+        fwrite($file->open('w'), 'AAAAAAAAAAAAA');
 
-        $result = fread($file->stream($mode), 1000);
+        $result = fread($file->open($mode), 1000);
         $this->assertEquals($mode != 'w+' ? 'AAAAAAAAAAAAA' : '', $result);
 
     }
@@ -87,9 +87,9 @@ class StreamModelTest extends TestCase
     function testReadPointer($mode)
     {
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
-        $readStream = $file->stream($mode);
+        $readStream = $file->open($mode);
 
         if ($mode != 'w+') {
             $this->assertEquals('A', fread($readStream, 1));
@@ -111,9 +111,9 @@ class StreamModelTest extends TestCase
     {
 
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
-        $this->assertEquals($position, ftell($file->stream($mode)));
+        $this->assertEquals($position, ftell($file->open($mode)));
 
     }
 
@@ -124,8 +124,8 @@ class StreamModelTest extends TestCase
     {
         $file = new File();
 
-        fwrite($file->stream('w'), 'ABCD');
-        $stream = $file->stream($mode);
+        fwrite($file->open('w'), 'ABCD');
+        $stream = $file->open($mode);
         fread($stream, 1);
         $this->assertEquals($position, ftell($stream));
 
@@ -138,9 +138,9 @@ class StreamModelTest extends TestCase
     function testSeek($mode)
     {
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
-        $readStream = $file->stream($mode);
+        $readStream = $file->open($mode);
 
         $this->assertEquals(-1, fseek($readStream, -1));
         $this->assertEquals(-1, fseek($readStream, 5));
@@ -171,7 +171,7 @@ class StreamModelTest extends TestCase
     function testWritePointer($mode)
     {
         $file = new File();
-        $writeStream = $file->stream($mode);
+        $writeStream = $file->open($mode);
         fwrite($writeStream, 'A');
         fwrite($writeStream, 'B');
         fwrite($writeStream, 'C');
@@ -179,7 +179,7 @@ class StreamModelTest extends TestCase
         fwrite($writeStream, '');
         fclose($writeStream);
 
-        $this->assertEquals('ABCD', fread($file->stream('r'), 5));
+        $this->assertEquals('ABCD', fread($file->open('r'), 5));
 
     }
 
@@ -190,10 +190,15 @@ class StreamModelTest extends TestCase
     {
 
         $file = new File();
-        fwrite($file->stream('w'), 'AAAA');
-        fwrite($file->stream($mode), 'BBBBB');
+        $stream = $file->open('w');
+        fwrite($stream, 'AAAAc');
+        fclose($stream);
 
-        $this->assertEquals('AAAABBBBB', fread($file->stream('r'), 50));
+        $stream = $file->open($mode);
+        fwrite($stream, 'BBBBB');
+        fclose($stream);
+
+        $this->assertEquals('AAAAcBBBBB', fread($file->open('r'), 50));
 
     }
 
@@ -203,13 +208,13 @@ class StreamModelTest extends TestCase
     function testReadInAppendMode($mode)
     {
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
         if ($mode === 'a') {
             $this->expectNotToPerformAssertions();
             return;
         }
-        $this->assertEquals('AB', fread($file->stream($mode), 2));
+        $this->assertEquals('AB', fread($file->open($mode), 2));
     }
 
     /**
@@ -218,9 +223,9 @@ class StreamModelTest extends TestCase
     function testReturnFalseIfWrongModeRead($mode)
     {
         $file = new File();
-        fwrite($file->stream('w'), 'ABCD');
+        fwrite($file->open('w'), 'ABCD');
 
-        $this->assertFalse(fread($file->stream($mode), 2));
+        $this->assertFalse(fread($file->open($mode), 2));
     }
 
 

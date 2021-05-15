@@ -4,14 +4,15 @@
 namespace JBernavaPrah\EloquentFS\Concerns;
 
 
+use Illuminate\Database\Eloquent\Model;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use Illuminate\Support\Str;
+use JBernavaPrah\EloquentFS\Models\File;
 
 trait HasStream
 {
 
-    private $stream;
-
+    protected $stream;
 
     public static function bootHasStream()
     {
@@ -21,24 +22,29 @@ trait HasStream
 
     }
 
-    protected function createPathForFile(self $file): string
+    public function initializeHasStream()
     {
-
-        if (is_null($file->getKey())) {
-            $file->{$file->getKeyName()} = Str::random(32);
+        if (is_null($this->getKey())) {
+            $this->{$this->getKeyName()} = Str::random(32);
         }
 
+        $this->chunk_size = self::$defaultChunkSize;
+    }
+
+    protected function createPathForFile(): string
+    {
         return sprintf(
             '%s://%s',
             EloquentFSStreamWrapper::$streamWrapperProtocol,
-            urlencode($file->getKey())
+            urlencode($this->getKey())
         );
     }
 
-    public function stream($mode)
+
+    public function open($mode)
     {
 
-        $path = $this->createPathForFile($this);
+        $path = $this->createPathForFile();
         $context = stream_context_create([
             EloquentFSStreamWrapper::$streamWrapperProtocol => [
                 'file' => $this,
@@ -52,7 +58,7 @@ trait HasStream
     protected function getStream()
     {
         if (!$this->stream) {
-            $this->stream = $this->stream(self::$defaultOpenFileMode);
+            $this->stream = $this->open(File::$defaultOpenFileMode);
         }
 
         return $this->stream;
@@ -61,7 +67,7 @@ trait HasStream
     public function read(?int $length = null): string
     {
 
-        $length = $length ?: self::$defaultChunkSize;
+        $length = $length ?: File::$defaultChunkSize;
 
         return fread($this->getStream(), $length);
     }
@@ -74,16 +80,19 @@ trait HasStream
     public function write($content): int
     {
 
-        var_dump($this);
-        die();
-
         return fwrite($this->getStream(), $content);
     }
 
+    public function tell(): int
+    {
+        return ftell($this->getStream());
+    }
+
+
     public function close(): bool
     {
-
         return fclose($this->getStream());
     }
+
 
 }
