@@ -355,7 +355,6 @@ class EloquentFSStreamWrapper
                 : $this->file->chunk_size;
 
             if ($actualChunkSize !== $expectedChunkSize) {
-
                 throw CorruptFileException::unexpectedSize($actualChunkSize, $expectedChunkSize);
             }
 
