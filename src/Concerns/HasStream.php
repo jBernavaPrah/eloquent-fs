@@ -7,12 +7,29 @@ namespace JBernavaPrah\EloquentFS\Concerns;
 use Illuminate\Database\Eloquent\Model;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use Illuminate\Support\Str;
+use JBernavaPrah\EloquentFS\Exception\RuntimeException;
 use JBernavaPrah\EloquentFS\Models\File;
+use function Webmozart\Assert\Tests\StaticAnalysis\string;
 
+
+/**
+ * Trait HasStream
+ * @package JBernavaPrah\EloquentFS\Concerns
+ * @method int write(mixed $data)
+ * @method int seek(int $position, int $whence = SEEK_SET)
+ * @method int tell()
+ * @method bool flush()
+ */
 trait HasStream
 {
 
     protected $stream;
+
+    protected static $allowedModes = ['a', 'a+', 'r', 'r+', 'w', 'w+'];
+
+    public static $defaultChunkSize = 261120;
+
+    public static $defaultOpenFileMode = 'a+';
 
     public static function bootHasStream()
     {
@@ -41,8 +58,17 @@ trait HasStream
     }
 
 
+    /**
+     * Open new stream for this file.
+     * @param $mode - Valid Values are: r, r+, w, w+, a, a+
+     * @return false|resource
+     */
     public function open($mode)
     {
+
+        if (!in_array($mode, self::$allowedModes)) {
+            throw new RuntimeException("Mode $mode not allowed");
+        }
 
         $path = $this->createPathForFile();
         $context = stream_context_create([
@@ -55,43 +81,52 @@ trait HasStream
     }
 
 
+    /**
+     * Close stream for this file.
+     * @return bool
+     */
+    public function close(): bool
+    {
+
+        $closed = fclose($this->getStream());
+        $this->stream = null;
+        return $closed;
+
+    }
+
+    public function read(int $length = null): string
+    {
+
+        $length = $length ?: self::$defaultChunkSize;
+
+        $contents = '';
+        while (!feof($this->getStream())) {
+            $contents .= fread($this->getStream(), $length - strlen($contents));
+        }
+        return $contents;
+    }
+
+
     protected function getStream()
     {
         if (!$this->stream) {
-            $this->stream = $this->open(File::$defaultOpenFileMode);
+            $this->stream = $this->open(self::$defaultOpenFileMode);
         }
 
         return $this->stream;
     }
 
-    public function read(?int $length = null): string
+    public function __call($method, $parameters)
     {
 
-        $length = $length ?: File::$defaultChunkSize;
+        $implementedFileFunction = ['read', 'write', 'seek', 'tell', 'flush'];
 
-        return fread($this->getStream(), $length);
-    }
+        if (in_array("$method", $implementedFileFunction) && function_exists("f$method")) {
+            array_unshift($parameters, $this->getStream());
+            return call_user_func("f$method", ...$parameters);
+        }
 
-
-    /**
-     * @param $content
-     * @return int
-     */
-    public function write($content): int
-    {
-
-        return fwrite($this->getStream(), $content);
-    }
-
-    public function tell(): int
-    {
-        return ftell($this->getStream());
-    }
-
-
-    public function close(): bool
-    {
-        return fclose($this->getStream());
+        return parent::__call($method, $parameters);
     }
 
 

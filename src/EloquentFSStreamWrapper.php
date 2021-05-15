@@ -199,11 +199,10 @@ class EloquentFSStreamWrapper
      * @see http://php.net/manual/en/streamwrapper.stream-seek.php
      * @param integer $offset Stream offset to seek to
      * @param integer $whence One of SEEK_SET, SEEK_CUR, or SEEK_END
-     * @return boolean True if the position was updated and false otherwise
+     * @return bool True if the position was updated and false otherwise
      */
     public function stream_seek(int $offset, int $whence = SEEK_SET): bool
     {
-
 
         if (abs($offset) > $this->file->length) {
             return false;
@@ -300,20 +299,20 @@ class EloquentFSStreamWrapper
         $positionOnChunkData = $pointer - ($startFromChunkNumber * $this->file->chunk_size);
 
         $this->setBufferedChunk($startFromChunkNumber);
-        $bytesRead = 0;
+        $bytesWritten = 0;
 
-        while ($toWrite = substr($data, $bytesRead, $this->file->chunk_size - $positionOnChunkData)) {
+        while ($toWrite = substr($data, $bytesWritten, $this->file->chunk_size - $positionOnChunkData)) {
 
             $this->bufferedChunk->data = substr_replace($this->bufferedChunk->data, $toWrite, $positionOnChunkData);
 
             if (strlen($this->bufferedChunk->data) === $this->file->chunk_size) {
                 $this->bufferedChunk->save();
                 $this->bufferedChunk = null;
-                $this->setBufferedChunk($startFromChunkNumber++);
+                $this->setBufferedChunk(++$startFromChunkNumber);
             }
 
             $positionOnChunkData = 0;
-            $bytesRead += strlen($toWrite);
+            $bytesWritten += strlen($toWrite);
 
             if (!$this->isAppendMode()) {
                 $this->pointer += strlen($toWrite);
@@ -323,7 +322,7 @@ class EloquentFSStreamWrapper
 
         // $this->file->getConnection()->commit();
 
-        return $bytesRead;
+        return $bytesWritten;
 
     }
 
@@ -359,9 +358,15 @@ class EloquentFSStreamWrapper
             }
 
             $dataRead = substr($chuck->data, $offset, $length - strlen($data));
+
+            $offset = 0;
+
+            ++$index;
+
             $data .= $dataRead;
             $this->pointer += strlen($dataRead);
-            ++$index;
+
+
 
             if (strlen($data) === $length) {
                 break;

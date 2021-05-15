@@ -24,10 +24,6 @@ use JBernavaPrah\EloquentFS\Exception\RuntimeException;
  * @property Carbon $updated_at
  * @property Carbon|null $deleted_at
  *
- * @method resource open(string $mode) valid only r, r+, w, w+, a, a+
- * @method int write(mixed $data)
- * @method string read(?int $length = null)
- * @method void close()
  *
  */
 class File extends Model
@@ -37,10 +33,6 @@ class File extends Model
     use HasStream;
 
     public $incrementing = false;
-
-    public static $defaultOpenFileMode = 'a+';
-
-    public static $defaultChunkSize = 261120;
 
     public static $defaultModelFileChunk = FileChunk::class;
 

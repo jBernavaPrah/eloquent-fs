@@ -12,44 +12,33 @@ class ModelTest extends TestCase
 {
 
 
-    function testCreateFile()
+    function testFile()
     {
 
-        $content = str_pad('X', 12, 'X');
+        $content = 'ABCDEFGHILMNOPQRSTUVWXYZ';
 
         $file = new File();
         $file->chunk_size = 3;
-        $file->write($content);
+        $this->assertEquals(strlen($content), $file->write($content));
+        $file->flush();
+        $this->assertEquals($content, $file->read(160000));
+
+        $this->assertEquals(0, $file->seek(0));
+        $this->assertEquals(substr($content, 0, 4), $file->read(4));
+
+        $this->assertEquals(0, $file->seek(-4, SEEK_END));
+        $this->assertEquals(strlen($content) - 4, $file->tell());
+        $this->assertEquals(substr($content, -4, 4), $file->read(4));
+
+
+        // reset
         $file->close();
+        $file->open('w+');
+        $this->assertEquals(0, $file->tell());
 
-        $this->assertEquals(4, $file->chunks()->count());
-        foreach ($file->chunks() as $chunk) {
-            $this->assertEquals('XXX', $chunk->data);
-        }
 
     }
 
-    function testCreateStreamFromStatic(){
-
-        File::open('a+');
-
-        File::write('something');
-
-        $this->expectNotToPerformAssertions();
-
-    }
-
-    function testThrowExceptionIfTryToChangeChunkSizeAfterWritten()
-    {
-
-        $this->expectException(RuntimeException::class);
-        $file = new File();
-        //$file->chunk_size = 4;
-        $file->write('aaa');
-        $file->chunk_size = 6;
-        //$file->close();
-
-    }
 
     function testCreateWithLessThatChunk()
     {
@@ -59,7 +48,7 @@ class ModelTest extends TestCase
         $file->write('XX');
 
         // only one chuck is really written..
-        $this->assertEquals('', $file->read());
+        $this->assertEquals('', $file->read(8200));
         $file->close();
 
         $this->assertEquals(1, $file->chunks()->count());

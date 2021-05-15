@@ -202,6 +202,42 @@ class StreamModelTest extends TestCase
 
     }
 
+    function testBigFileMD5()
+    {
+
+        $resource = tmpfile();
+        $meta = stream_get_meta_data($resource);
+        $tmpFilename = $meta['uri'];
+
+        $strLength = 300000;
+
+        $data = '';
+        $byteSize = $strLength;
+        while ($byteSize > 0) {
+            --$byteSize;
+            $data .= chr(rand(0, 255));
+        }
+
+        file_put_contents($tmpFilename, $data);
+        $md5 = md5($data);
+
+        $file = new File();
+        stream_copy_to_stream($resource, $file->open('w+'));
+        $file->seek(0);
+
+        $returnData = $file->read($strLength + 1);
+        $this->assertEquals($strLength, strlen($returnData));
+
+        foreach (str_split($returnData) as $key => $char) {
+            $this->assertEquals($data[$key], $char, "Not Equal on character: $key");
+        }
+
+        $this->assertEquals($md5, md5($returnData));
+        $this->assertEquals($data, $returnData);
+
+
+    }
+
     /**
      * @dataProvider appendModeProviders
      */
