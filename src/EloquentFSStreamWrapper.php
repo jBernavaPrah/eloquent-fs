@@ -4,17 +4,24 @@
 namespace JBernavaPrah\EloquentFS;
 
 
+use Carbon\Carbon;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Database\Capsule\Manager;
+use Illuminate\Database\ConnectionResolverInterface;
+use Illuminate\Database\Migrations\DatabaseMigrationRepository;
+use Illuminate\Database\Migrations\MigrationRepositoryInterface;
+use Illuminate\Database\Migrations\Migrator;
 use JBernavaPrah\EloquentFS\Exception\CorruptFileException;
 use JBernavaPrah\EloquentFS\Models\File;
 use JBernavaPrah\EloquentFS\Models\FileChunk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Throwable;
+use function stream_wrapper_unregister;
 
 /**
  * Stream wrapper for reading and writing a file on Eloquent.
- *
- * @internal
  */
 class EloquentFSStreamWrapper
 {
@@ -24,29 +31,97 @@ class EloquentFSStreamWrapper
     /**
      * @var string
      */
-    public static $streamWrapperProtocol = 'eloquent-stream';
+    protected static $streamWrapperProtocol = 'efs';
 
     /** @var string */
     private $mode;
 
     private $triggerErrors = true;
 
-    private $isClosed = false;
+    /**
+     * File Model to use to save on database.
+     * @var string
+     */
+    public static $defaultFileClass = File::class;
 
     /**
+     * Default chunk to save in database.
+     * @var int
+     */
+    protected static $defaultChunkSize = 261120;
+
+    /**
+     * current file
      * @var File
      */
     private $file;
 
     /**
+     * Current pointer.
      * @var int
      */
     private $pointer = 0;
 
     /**
+     * Buffered chunk. Will be written on database when: Chunk data is === $defaultChunkSize or fflush() is called.
      * @var Model|FileChunk|null
      */
     private $bufferedChunk = null;
+
+    /**
+     * Register the Eloquent stream wrapper.
+     *
+     */
+    public static function register(?string $connection = null)
+    {
+
+        if (in_array(self::$streamWrapperProtocol, stream_get_wrappers())) {
+            self::unregister();
+        }
+
+        stream_wrapper_register(self::$streamWrapperProtocol, static::class, STREAM_IS_URL);
+
+        // todo: test if this work also with extends Models
+        File::resolveConnection($connection);
+        FileChunk::resolveConnection($connection);
+
+    }
+
+    public static function unregister()
+    {
+        stream_wrapper_unregister(self::$streamWrapperProtocol);
+    }
+
+
+    /**
+     * @param Manager $manager
+     * @param string $connection
+     * @param array $paths
+     * @throws BindingResolutionException
+     */
+    public static function migrate(Manager $manager, string $connection = 'default', array $paths = [__DIR__ . '/../database/migrations'])
+    {
+
+        $currentConnection = $manager->getDatabaseManager()->getDefaultConnection();
+        $manager->getDatabaseManager()->setDefaultConnection($connection);
+
+        $container = Container::getInstance();
+        $databaseMigrationRepository = new DatabaseMigrationRepository($manager->getDatabaseManager(), 'migrations');
+        if (!$databaseMigrationRepository->repositoryExists()) {
+            $databaseMigrationRepository->createRepository();
+        }
+
+        $container->instance(MigrationRepositoryInterface::class, $databaseMigrationRepository);
+        $container->instance(ConnectionResolverInterface::class, $manager->getDatabaseManager());
+
+        /** @var Migrator $migrator */
+        $migrator = $container->make(Migrator::class);
+        $migrator->run($paths);
+
+        $manager->getDatabaseManager()->setDefaultConnection($currentConnection);
+
+    }
+
 
     public function __destruct()
     {
@@ -58,6 +133,10 @@ class EloquentFSStreamWrapper
         $this->pointer = 0;
     }
 
+    protected function clearPath($path): string
+    {
+        return Str::remove(self::$streamWrapperProtocol . "://", $path);
+    }
 
     /**
      * Opens the stream.
@@ -68,38 +147,49 @@ class EloquentFSStreamWrapper
      * @param integer $options Additional flags set by the streams API
      * @return boolean
      */
-    public function stream_open(string $path, string $mode, $options): bool
+    public function stream_open(string $path, string $mode, int $options): bool
     {
         $this->mode = $mode;
 
-        $parts = explode('://', $path, 2);
+        $id = $this->clearPath($path);
 
-        $protocol = $parts[0] ?: self::$streamWrapperProtocol;
+        /** @var File $class */
+        $class = self::$defaultFileClass;
+        $this->file = (new $class)::findOrNew($id);
 
-        $context = stream_context_get_options($this->context);
-        $this->file = $context[$protocol]['file'];
+        if (!$this->file->exists) {
+            $this->file->id = $id;
+            $this->file->chunk_size = self::$defaultChunkSize;
+        }
 
-        $this->triggerErrors = $options === STREAM_REPORT_ERRORS;
-
-        if ($this->file->chunk_size < 1) {
+        if (!$this->file->chunk_size || $this->file->chunk_size < 0) {
             throw new CorruptFileException('file.chunk_size is not an integer >= 1');
         }
 
-        return $this->initializeFile();
-    }
+        $this->triggerErrors = $options === STREAM_REPORT_ERRORS;
 
-    /**
-     * Register the Eloquent stream wrapper.
-     *
-     */
-    public static function register()
-    {
-        if (in_array(self::$streamWrapperProtocol, stream_get_wrappers())) {
-            stream_wrapper_unregister(self::$streamWrapperProtocol);
+
+        if (Str::startsWith($this->mode, 'r') && !$this->file->exists) {
+
+            trigger_error(sprintf('File %s not found.', $path), E_USER_WARNING);
+            // file need to exists on r/r+ mode!
+            return false;
         }
 
-        stream_wrapper_register(self::$streamWrapperProtocol, static::class, STREAM_IS_URL);
+        // create new file if not exists now..
+        if (!$this->file->save() && $this->triggerErrors) {
+            trigger_error('Impossible to save file on database.', E_USER_WARNING);
+            return false;
+        }
+
+        if (Str::startsWith($this->mode, 'w')) {
+            // delete all chunks if mode are w/ w+
+            $this->file->chunks()->delete();
+        }
+
+        return true;
     }
+
 
     /**
      * Closes the stream.
@@ -108,7 +198,20 @@ class EloquentFSStreamWrapper
      */
     public function stream_close()
     {
-        $this->isClosed = True;
+        // nothing to do here..
+    }
+
+    /**
+     * Delete a file
+     * @param string $path
+     *
+     * @return bool
+     * @see https://www.php.net/manual/en/streamwrapper.unlink.php
+     */
+    public function unlink(string $path): bool
+    {
+
+        return File::where('id', $this->clearPath($path))->delete();
     }
 
     /**
@@ -120,7 +223,7 @@ class EloquentFSStreamWrapper
     public function stream_eof(): bool
     {
 
-        return $this->pointer === $this->file->length;
+        return $this->pointer === ($this->file->length + strlen($this->bufferedChunk->data ?? ''));
     }
 
     public function stream_flush(): bool
@@ -148,7 +251,8 @@ class EloquentFSStreamWrapper
     public function stream_write(string $data)
     {
 
-        if (!$this->isWriteMode() | $this->isClosed) {
+        if (!$this->isWriteMode()) {
+            trigger_error('Bad file descriptor.', E_USER_WARNING);
             return false;
         }
 
@@ -177,8 +281,9 @@ class EloquentFSStreamWrapper
     public function stream_read(int $length)
     {
 
-        if (!$this->isReadMode() | $this->isClosed) {
+        if (!$this->isReadMode()) {
 
+            trigger_error('Bad file descriptor.', E_USER_WARNING);
             return false;
         }
 
@@ -231,12 +336,31 @@ class EloquentFSStreamWrapper
     }
 
     /**
-     * Return information about the stream.
-     *
-     * @see http://php.net/manual/en/streamwrapper.stream-stat.php
-     * @return array
+     * Retrieve information about a file
+     * @param string $path
+     * @param int $flags
+     * @return false|int[]
      */
-    public function stream_stat(): array
+    public function url_stat(string $path, int $flags)
+    {
+
+        $id = $this->clearPath($path);
+        $file = File::find($id);
+        if (!$file) {
+
+            if (!($flags & STREAM_URL_STAT_QUIET)) {
+                trigger_error(sprintf('Impossible to get statistics. File %s not found.', $id), E_USER_WARNING);
+            }
+
+            return false;
+        }
+
+
+        return $this->getStatistics($file);
+
+    }
+
+    protected function getStatistics(File $file): array
     {
         $stat = [
             0 => 0, 'dev' => 0,
@@ -255,16 +379,26 @@ class EloquentFSStreamWrapper
         ];
 
 
-        $stat[2] = $stat['mode'] = $this->isReadMode() ? 0100444  // S_IFREG & S_IRUSR & S_IRGRP & S_IROTH
-            : 0100222; // S_IFREG & S_IWUSR & S_IWGRP & S_IWOTH
-        $stat[7] = $stat['size'] = $this->file->length;
+        $stat[2] = $stat['mode'] = "0100777";
+        $stat[7] = $stat['size'] = $file->length;
 
-        $stat[9] = $stat['mtime'] = $this->file->updated_at->timestamp ?? 0;
-        $stat[10] = $stat['ctime'] = $this->file->created_at->timestamp ?? 0;
+        $stat[9] = $stat['mtime'] = $file->updated_at->timestamp ?? 0;
+        $stat[10] = $stat['ctime'] = $file->created_at->timestamp ?? 0;
 
-        $stat[11] = $stat['blksize'] = $this->file->chunk_size ?? -1;
+        $stat[11] = $stat['blksize'] = (int)$file->chunk_size ?? -1;
 
         return $stat;
+    }
+
+    /**
+     * Return information about the stream.
+     *
+     * @see http://php.net/manual/en/streamwrapper.stream-stat.php
+     * @return array
+     */
+    public function stream_stat(): array
+    {
+        return $this->getStatistics($this->file);
     }
 
     /**
@@ -276,6 +410,35 @@ class EloquentFSStreamWrapper
     public function stream_tell()
     {
         return $this->pointer;
+    }
+
+
+    /**
+     * @param string $path
+     * @param int $option
+     * @param mixed $value
+     * @return bool
+     */
+    public function stream_metadata(string $path, int $option, $value): bool
+    {
+
+        $id = $this->clearPath($path);
+
+        if ($option & STREAM_META_TOUCH) {
+            /** @var File $file */
+            $file = File::find($id);
+            if (!$file) {
+                $file = new File;
+                $file->id = $id;
+            }
+
+            $file->updated_at = $value[0] ?? Carbon::now();
+            $file->save();
+            return true;
+        }
+
+        return false;
+
     }
 
 
@@ -367,7 +530,6 @@ class EloquentFSStreamWrapper
             $this->pointer += strlen($dataRead);
 
 
-
             if (strlen($data) === $length) {
                 break;
             }
@@ -390,41 +552,6 @@ class EloquentFSStreamWrapper
     private function isReadMode(): bool
     {
         return Str::startsWith($this->mode, ['w+', 'r', 'a+']);
-    }
-
-    private function initializeFile(): bool
-    {
-
-        // 'r'	Open for reading only; place the file pointer at the beginning of the file.
-        //'r+'	Open for reading and writing; place the file pointer at the beginning of the file.
-        //'w'	Open for writing only; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-        //'w+'	Open for reading and writing; place the file pointer at the beginning of the file and truncate the file to zero length. If the file does not exist, attempt to create it.
-        //'a'	Open for writing only; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() has no effect, writes are always appended.
-        //'a+'	Open for reading and writing; place the file pointer at the end of the file. If the file does not exist, attempt to create it. In this mode, fseek() only affects the reading position, writes are always appended.
-
-
-        if ($this->isAppendMode()) {
-            return $this->file->save();
-        }
-
-        if (in_array($this->mode, ['w', 'w+'])) {
-
-            if ($created = $this->file->save()) {
-                $this->file->chunks()->delete();
-            }
-
-            return $created;
-        }
-
-
-        // in read and read+
-        if (!$this->file->exists && $this->triggerErrors) {
-            trigger_error('File not exists yet. First create it.', E_USER_WARNING);
-        }
-
-
-        return $this->file->exists;
-
     }
 
 

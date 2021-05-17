@@ -4,12 +4,10 @@ namespace JBernavaPrah\EloquentFS\Models;
 
 
 use Carbon\Carbon;
-use JBernavaPrah\EloquentFS\Concerns\HasStream;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use JBernavaPrah\EloquentFS\Exception\RuntimeException;
 
 /**
  * Class File
@@ -22,15 +20,11 @@ use JBernavaPrah\EloquentFS\Exception\RuntimeException;
  *
  * @property Carbon $created_at
  * @property Carbon $updated_at
- * @property Carbon|null $deleted_at
  *
  *
  */
 class File extends Model
 {
-
-    use SoftDeletes;
-    use HasStream;
 
     public $incrementing = false;
 
@@ -38,10 +32,22 @@ class File extends Model
 
     protected $guarded = [];
 
-
     protected $casts = [
-        'metadata' => 'json'
+        'metadata' => 'json',
+        'chunk_size' => 'integer'
     ];
+
+    /**
+     * The "booted" method of the model.
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        static::creating(function (File $file) {
+            $file->id = $file->id ?: Str::random(32);
+        });
+    }
 
 
     public function getLengthAttribute()
@@ -76,6 +82,26 @@ class File extends Model
     public function chunks(): HasMany
     {
         return $this->hasMany(self::$defaultModelFileChunk);
+    }
+
+    /**
+     * Open new stream for this file.
+     * @param $mode - Valid Values are: r, r+, w, w+, a, a+
+     * @return false|resource
+     */
+    public function open($mode)
+    {
+        return fopen("efs://$this->id", $mode, false);
+    }
+
+    public function read(int $length = null): string
+    {
+        return file_get_contents("efs://$this->id", false, null, 0, $length);
+    }
+
+    public function write($data)
+    {
+        return file_put_contents("efs://$this->id", $data);
     }
 
 

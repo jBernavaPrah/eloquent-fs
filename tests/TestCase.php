@@ -3,8 +3,8 @@
 namespace Tests;
 
 
-use JBernavaPrah\EloquentFS\Migration;
-use Illuminate\Database\Capsule\Manager as DB;
+use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
+use Illuminate\Database\Capsule\Manager;
 use PHPUnit\Framework\TestCase as BaseTestCAse;
 
 class TestCase extends BaseTestCAse
@@ -16,24 +16,22 @@ class TestCase extends BaseTestCAse
     {
         parent::setUp();
 
-        $db = new DB();
 
-        $config = require __DIR__ . '/config/database.php';
+        $db = new Manager();
 
-        $db->addConnection($config[getenv('DATABASE') ?: 'sqlite']);
+        $db->addConnection([
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ], 'default');
+
         $db->setAsGlobal();
         $db->bootEloquent();
 
-        $this->migrate();
+        EloquentFSStreamWrapper::migrate($db);
+        EloquentFSStreamWrapper::register();
 
     }
 
-    public function migrate()
-    {
-        DB::schema()->dropAllTables();
-
-        (new Migration())->up();
-
-    }
 }
 
