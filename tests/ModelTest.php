@@ -1,10 +1,9 @@
 <?php
 
 
-namespace Tests;
+namespace JBernavaPrah\EloquentFS\Tests;
 
 
-use JBernavaPrah\EloquentFS\Exception\RuntimeException;
 use JBernavaPrah\EloquentFS\Models\File;
 
 
@@ -12,58 +11,26 @@ class ModelTest extends TestCase
 {
 
 
-    function testFile()
+    function testFileModel()
     {
 
-        $content = 'ABCDEFGHILMNOPQRSTUVWXYZ';
+        $content = 'foobar';
 
         $file = new File();
-        $file->chunk_size = 3;
-        $this->assertEquals(strlen($content), $file->write($content));
-        $file->flush();
-        $this->assertEquals($content, $file->read(160000));
+        $this->assertEquals(6, $file->write($content));
 
-        $this->assertEquals(0, $file->seek(0));
-        $this->assertEquals(substr($content, 0, 4), $file->read(4));
+        $this->assertEquals('foobar', $file->read());
+        $this->assertEquals('fo', $file->read(0, 2));
 
-        $this->assertEquals(0, $file->seek(-4, SEEK_END));
-        $this->assertEquals(strlen($content) - 4, $file->tell());
-        $this->assertEquals(substr($content, -4, 4), $file->read(4));
+        $this->assertIsResource($file->stream('w'));
 
+        $this->assertEquals(6, $file->write($content, false));
+        $this->assertEquals('foobar', $file->read());
 
-        // reset
-        $file->close();
-        $file->open('w+');
-        $this->assertEquals(0, $file->tell());
+        $this->assertEquals(6, $file->write($content));
+        $this->assertEquals('foobarfoobar', $file->read());
 
 
-    }
-
-
-    function testCreateWithLessThatChunk()
-    {
-
-        $file = new File();
-
-        $file->write('XX');
-
-        // only one chuck is really written..
-        $this->assertEquals('', $file->read(8200));
-        $file->close();
-
-        $this->assertEquals(1, $file->chunks()->count());
-        $this->assertEquals('XX', $file->chunks()->first()->data);
-
-    }
-
-    function testCreateFileWithDefaults()
-    {
-        $file = new File();
-        $file->write('XX');
-        $file->close();
-        $this->assertIsString($file->id);
-        $this->assertEquals(File::$defaultChunkSize, $file->chunk_size);
-        $this->assertEquals(2, $file->length);
     }
 
 

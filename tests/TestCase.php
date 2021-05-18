@@ -1,37 +1,24 @@
 <?php
 
-namespace Tests;
+namespace JBernavaPrah\EloquentFS\Tests;
 
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use JBernavaPrah\EloquentFS\EloquentFSServiceProvider;
 
-use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
-use Illuminate\Database\Capsule\Manager;
-use PHPUnit\Framework\TestCase as BaseTestCAse;
-
-class TestCase extends BaseTestCAse
+class TestCase extends \Orchestra\Testbench\TestCase
 {
-    /**
-     * Create the tables this model needs for testing.
-     */
-    public function setUp(): void
+
+    use DatabaseMigrations;
+
+    protected function getPackageProviders($app)
     {
-        parent::setUp();
-
-
-        $db = new Manager();
-
-        $db->addConnection([
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ], 'default');
-
-        $db->setAsGlobal();
-        $db->bootEloquent();
-
-        EloquentFSStreamWrapper::migrate($db);
-        EloquentFSStreamWrapper::register();
-
+        return [
+            EloquentFSServiceProvider::class,
+        ];
     }
 
-}
+    protected function getEnvironmentSetUp($app)
+    {
 
+    }
+}

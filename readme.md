@@ -25,10 +25,14 @@ php artisan migrate
 ### Standalone:
 
 You need to have the database manager configured.
+See https://gist.github.com/jaceju/cc53d2fbab6e828f69b2a3b7e267d1ed, 
+to have an idea to how to use
 
 ```php
 // configure your DB manager
+use Illuminate\Container\Container;
 use Illuminate\Database\Capsule\Manager;
+use Illuminate\Events\Dispatcher;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 
 $db = new Manager();
@@ -38,11 +42,12 @@ $db->addConnection( [
         'prefix' => '',
     ]);
 $db->setAsGlobal();
+$db->setEventDispatcher(new Dispatcher(new Container()));
 $db->bootEloquent();
 
-// Call this command only .
-// Will create the migrations table and call all the migrations on database/migrations directory.
-
+// This comand will create the migrations table
+// and call all the migrations on database/migrations
+// directory.
 EloquentFSStreamWrapper::migrate($db, $connection = 'default');
 
 ```
@@ -104,3 +109,4 @@ I will be glad to merge its!
 2. Need a performance review. A comparison may by with MongoDB will be super! 
 3. It's not production ready.
 4. Need a testing review.
+5. `ftruncate()` need to be implemented.

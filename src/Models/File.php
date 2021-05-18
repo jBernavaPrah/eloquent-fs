@@ -4,10 +4,10 @@ namespace JBernavaPrah\EloquentFS\Models;
 
 
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 
 /**
  * Class File
@@ -34,21 +34,26 @@ class File extends Model
 
     protected $casts = [
         'metadata' => 'json',
-        'chunk_size' => 'integer'
+        'chunk_size' => 'integer',
     ];
 
-    /**
-     * The "booted" method of the model.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::creating(function (File $file) {
-            $file->id = $file->id ?: Str::random(32);
-        });
-    }
-
+//    public static function booted()
+//    {
+//        static::creating(function (File $file) {
+//            $file->id = $file->id ?: Str::random(32);
+//            $file->chunk_size = $file->chunk_size ?: EloquentFSStreamWrapper::$defaultChunkSize;
+//        });
+//    }
+//
+//    /**
+//     *
+//     * @return int|mixed
+//     * @internal
+//     */
+//    protected function getChunkSizeAttribute()
+//    {
+//        return (int)($this->attributes['chunk_size'] ?? EloquentFSStreamWrapper::$defaultChunkSize);
+//    }
 
     public function getLengthAttribute()
     {
@@ -84,24 +89,39 @@ class File extends Model
         return $this->hasMany(self::$defaultModelFileChunk);
     }
 
+    protected function context()
+    {
+        return stream_context_create([
+            EloquentFSStreamWrapper::$streamWrapperProtocol => [
+                'file' => $this,
+            ],
+        ]);
+    }
+
+
+    protected function getPathFile(): string
+    {
+        return EloquentFSStreamWrapper::$streamWrapperProtocol . "://context";
+    }
+
     /**
      * Open new stream for this file.
      * @param $mode - Valid Values are: r, r+, w, w+, a, a+
      * @return false|resource
      */
-    public function open($mode)
+    public function stream($mode)
     {
-        return fopen("efs://$this->id", $mode, false);
+        return fopen($this->getPathFile(), $mode, false, $this->context());
     }
 
-    public function read(int $length = null): string
+    public function read(int $offset = 0, int $length = null): string
     {
-        return file_get_contents("efs://$this->id", false, null, 0, $length);
+        return file_get_contents($this->getPathFile(), false, $this->context(), ...func_get_args());
     }
 
-    public function write($data)
+    public function write($data, $append = true)
     {
-        return file_put_contents("efs://$this->id", $data);
+        return file_put_contents($this->getPathFile(), $data, $append ? FILE_APPEND : 0, $this->context());
     }
 
 

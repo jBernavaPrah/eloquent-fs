@@ -1,10 +1,11 @@
 <?php
 
 
-namespace Tests;
+namespace JBernavaPrah\EloquentFS\Tests;
 
 
 use Carbon\Carbon;
+use ErrorException;
 use JBernavaPrah\EloquentFS\Models\File;
 
 
@@ -16,7 +17,7 @@ class EloquentFSStreamWrapperTest extends TestCase
     {
 
 
-        $this->expectError();
+        $this->expectException(ErrorException::class);
         file_put_contents('efs://some_file.txt', 'foobar');
 
         $stream = fopen('efs://some_file.txt', 'r');
@@ -73,7 +74,7 @@ class EloquentFSStreamWrapperTest extends TestCase
      */
     function testFileNeedToExists($mode)
     {
-        $this->expectError();
+        $this->expectException(ErrorException::class);
         fopen('efs://some_file.php', $mode);
     }
 
@@ -86,7 +87,7 @@ class EloquentFSStreamWrapperTest extends TestCase
 
         file_put_contents('efs://test_file.txt', 'foobar');
 
-        $this->expectError();
+        $this->expectException(ErrorException::class);
         $stream = fopen('efs://some_file.php', $mode);
         fread($stream, 10);
         fclose($stream);

@@ -31,7 +31,7 @@ class EloquentFSStreamWrapper
     /**
      * @var string
      */
-    protected static $streamWrapperProtocol = 'efs';
+    public static $streamWrapperProtocol = 'efs';
 
     /** @var string */
     private $mode;
@@ -48,7 +48,7 @@ class EloquentFSStreamWrapper
      * Default chunk to save in database.
      * @var int
      */
-    protected static $defaultChunkSize = 261120;
+    public static $defaultChunkSize = 261120;
 
     /**
      * current file
@@ -138,6 +138,32 @@ class EloquentFSStreamWrapper
         return Str::remove(self::$streamWrapperProtocol . "://", $path);
     }
 
+    protected function findOrNewFile($path): File
+    {
+
+        // get id from path
+        $id = $this->clearPath($path) ?: Str::random(32);
+
+        if ($this->context) {
+            $context = stream_context_get_options($this->context);
+            $file = $context[self::$streamWrapperProtocol]['file'] ?? null;
+            if ($file) {
+                $file->id = $file->id ?: $id;
+                $file->chunk_size = $file->chunk_size ?: self::$defaultChunkSize;
+                return $file;
+            }
+        }
+
+
+        /** @var File $class */
+        $class = self::$defaultFileClass;
+        $file = (new $class)::findOrNew($id);
+        $file->id = $file->id ?: $id;
+        $file->chunk_size = $file->chunk_size ?: self::$defaultChunkSize;
+        return $file;
+
+    }
+
     /**
      * Opens the stream.
      *
@@ -151,15 +177,10 @@ class EloquentFSStreamWrapper
     {
         $this->mode = $mode;
 
-        $id = $this->clearPath($path);
+        $this->file = $this->findOrNewFile($path);
 
-        /** @var File $class */
-        $class = self::$defaultFileClass;
-        $this->file = (new $class)::findOrNew($id);
-
-        if (!$this->file->exists) {
-            $this->file->id = $id;
-            $this->file->chunk_size = self::$defaultChunkSize;
+        if (!$this->file->id) {
+            throw new CorruptFileException('file.id is not an string');
         }
 
         if (!$this->file->chunk_size || $this->file->chunk_size < 0) {
@@ -167,7 +188,6 @@ class EloquentFSStreamWrapper
         }
 
         $this->triggerErrors = $options === STREAM_REPORT_ERRORS;
-
 
         if (Str::startsWith($this->mode, 'r') && !$this->file->exists) {
 
@@ -422,16 +442,8 @@ class EloquentFSStreamWrapper
     public function stream_metadata(string $path, int $option, $value): bool
     {
 
-        $id = $this->clearPath($path);
-
         if ($option & STREAM_META_TOUCH) {
-            /** @var File $file */
-            $file = File::find($id);
-            if (!$file) {
-                $file = new File;
-                $file->id = $id;
-            }
-
+            $file = $this->findOrNewFile($path);
             $file->updated_at = $value[0] ?? Carbon::now();
             $file->save();
             return true;
