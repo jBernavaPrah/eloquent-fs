@@ -1,32 +1,66 @@
-# Eloquent FileSystem
+# EloquentFS
 
-... Inspired by Mongo GridFS
+A filesystem wrapper that use eloquent, inspired by GridFS (Mongo)
 
 ### Attention: it's not production ready!
-
-The EloquentFS component implement the PHP Stream Wrapper using Eloquent Models as storage.
 
 ## Install:
 
 ```bash
 composer install jbernavaprah/eloquent-fs
 ```
- 
+
 ## Prerequisite:
 
 ### With laravel:
 
-Nothing special to do, the service provider will be already loaded and with him also the migrations. Simply run:
+Nothing special to do, the service provider will be already loaded and with him also the migrations.
+
+Simply run:
 
 ```bash
 php artisan migrate
 ```
 
+## Basic usage:
+
+To use this wrapper, you need to prefix the paths with `efs://`. The paths will be used as `id` of the file on database.
+
+```php
+touch('efs://file.txt');
+file_put_contents('efs://file.txt', "foobar\n");
+echo file_get_contents('efs://file.txt'); // "foobar\n"
+copy('efs://file.txt', 'efs://other_file.txt');
+unlink('efs://file.txt');
+unlink('efs://other_file.txt');
+```
+
+### Use with Eloquent model
+
+You can also use directly the Eloquent Model (or extend it) shipped with EloquentFS.
+
+```php
+use JBernavaPrah\EloquentFS\Models\File;
+
+$file = new File(); // It's a Eloquent model...
+$file->id = 'file.txt'; // if not provided, will generated random dynamically otherwise 
+
+$file->write("foobar", $append=true); // 6
+
+$file->read($offset =3, $length = 3); // "bar"
+$file->read($offset =0, $length = 6); // "foobar"
+
+$file->write("foobar", $append=true); // 6
+$file->read(); // foobarfoobar
+
+$file->delete(); // Delete
+
+
+```
+
 ### Standalone:
 
 You need to have the database manager configured.
-See https://gist.github.com/jaceju/cc53d2fbab6e828f69b2a3b7e267d1ed, 
-to have an idea to how to use
 
 ```php
 // configure your DB manager
@@ -45,68 +79,25 @@ $db->setAsGlobal();
 $db->setEventDispatcher(new Dispatcher(new Container()));
 $db->bootEloquent();
 
-// This comand will create the migrations table
-// and call all the migrations on database/migrations
-// directory.
+// This command will create the migrations table
+// and call the required migrations on database/migrations directory.
 EloquentFSStreamWrapper::migrate($db, $connection = 'default');
 
 ```
 
 For the standalone execution, you need also register the wrapper:
-
 ```php
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
-// register the wrapper..
 EloquentFSStreamWrapper::register();
 ```
 
-Note: Used with laravel, this is done automatically by service provider.
-
-## Basic usage:
-
-After registering the wrapper, you can use directly with php functions. To use correctly the wrapper, you need to prefix
-the path with `efs://`. This will tell to php to use the correct wrapper.
-
-The path will be tratted as `id` of the file on database.
-
-```php
-touch('efs://file.txt');
-file_put_contents('efs://file.txt', "foobar\n");
-echo file_get_contents('efs://file.txt'); // "foobar\n"
-copy('efs://file.txt', 'efs://other_file.txt');
-unlink('efs://file.txt');
-unlink('efs://other_file.txt');
-
-```
-
-### Use with Eloquent model
-You can also use directly the Eloquent Model shipped with EloquentFS, or you can extend it to add additional
-functionality to the model.
-
-```php
-use JBernavaPrah\EloquentFS\Models\File;
-
-$file = new File(); // It's a Eloquent model...
-$file->id = 'file.txt'; //generated random dynamically otherwise 
-
-// open new stream in append mode (a+)
-$file->write("Some data"); // 9
-// will be reopened in append mode 
-$file->read(9); // "Some data"
-
-$file->delete(); // Delete
-
-
-```
-
-
 ## How to help:
-Clone this repository, create new branch, do all your changes and then push back. 
-I will be glad to merge its! 
+Do a PR, and I will be glad to merge it!
 
 ## Missing implementations:
+
 1. The locking file with `flock()`.
-2. Need a performance review. A comparison may by with MongoDB will be super! 
+2. Need a performance review. A comparison may by with MongoDB will be super!
 3. It's not production ready.
 4. Need a testing review.
 5. `ftruncate()` need to be implemented.

@@ -22,7 +22,7 @@
   },
   "minimum-stability": "dev",
   "require": {
-    "php": "^7.3|^8.0",
+    "php": "^7.4|^8.0",
     "illuminate/database": "^8.0",
     "illuminate/pagination": "^8.0",
     "illuminate/filesystem": "^8.0",
@@ -49,5 +49,8 @@
     "psr-4": {
       "JBernavaPrah\\EloquentFS\\Tests\\": "tests"
     }
+  },
+  "scripts": {
+    "test": "phpunit"
   }
 }
