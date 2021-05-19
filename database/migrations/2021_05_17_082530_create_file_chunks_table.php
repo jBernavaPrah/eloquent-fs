@@ -13,20 +13,20 @@ return new class extends Migration {
     public function up()
     {
 
-        Schema::create('file_chunks', function (Blueprint $table) {
+        Schema::create('fs_file_chunks', function (Blueprint $table) {
             $table->string('id')->primary();
 
             $table->integer('n');
-            $table->string('file_id');
+            $table->string('fs_file_id');
             $table->binary('data');
 
-            $table->foreign('file_id')
+            $table->foreign('fs_file_id')
                 ->references('id')
-                ->on('files')
+                ->on('fs_files')
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
 
-            $table->index(['file_id', 'n']);
+            $table->index(['fs_file_id', 'n']);
 
         });
     }

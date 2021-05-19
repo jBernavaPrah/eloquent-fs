@@ -17,7 +17,9 @@ class EloquentFSServiceProvider extends ServiceProvider
     public function boot()
     {
 
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        if (EloquentFS::$runMigrations) {
+            $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        }
 
         EloquentFSStreamWrapper::register();
 

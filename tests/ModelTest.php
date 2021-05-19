@@ -4,7 +4,9 @@
 namespace JBernavaPrah\EloquentFS\Tests;
 
 
-use JBernavaPrah\EloquentFS\Models\File;
+use Illuminate\Database\Eloquent\Model;
+use JBernavaPrah\EloquentFS\EloquentFS;
+use JBernavaPrah\EloquentFS\Models\FsFile;
 
 
 class ModelTest extends TestCase
@@ -16,7 +18,7 @@ class ModelTest extends TestCase
 
         $content = 'foobar';
 
-        $file = new File();
+        $file = new FsFile();
         $this->assertEquals(6, $file->write($content));
 
         $this->assertEquals('foobar', $file->read());
@@ -29,6 +31,18 @@ class ModelTest extends TestCase
 
         $this->assertEquals(6, $file->write($content));
         $this->assertEquals('foobarfoobar', $file->read());
+
+
+    }
+
+    function testFileModelChangeConnection()
+    {
+
+        EloquentFS::$connection = 'abc';
+
+        $this->expectException(\InvalidArgumentException::class);
+        $file = new FsFile();
+        $file->getConnection();
 
 
     }

@@ -10,27 +10,23 @@ A filesystem wrapper that use eloquent, inspired by GridFS (Mongo)
 composer install jbernavaprah/eloquent-fs
 ```
 
-## Prerequisite:
-
-### With laravel:
-
-Nothing special to do, the service provider will be already loaded and with him also the migrations.
-
-Simply run:
-
+Then create the required tables on database with:
 ```bash
 php artisan migrate
 ```
 
+This will use the standard laravel migrations, therefore will be also used the default connection set on your project.
+
 ## Basic usage:
 
-To use this wrapper, you need to prefix the paths with `efs://`. The paths will be used as `id` of the file on database.
+To use this wrapper, you need to prefix the paths with `efs://`. The path will be used as `id` of the file on database.
 
 ```php
 touch('efs://file.txt');
 file_put_contents('efs://file.txt', "foobar\n");
 echo file_get_contents('efs://file.txt'); // "foobar\n"
 copy('efs://file.txt', 'efs://other_file.txt');
+echo file_get_contents('efs://other_file.txt'); // "foobar\n"
 unlink('efs://file.txt');
 unlink('efs://other_file.txt');
 ```
@@ -40,10 +36,10 @@ unlink('efs://other_file.txt');
 You can also use directly the Eloquent Model (or extend it) shipped with EloquentFS.
 
 ```php
-use JBernavaPrah\EloquentFS\Models\File;
+use JBernavaPrah\EloquentFS\Models\FsFile;
 
-$file = new File(); // It's a Eloquent model...
-$file->id = 'file.txt'; // if not provided, will generated random dynamically otherwise 
+$file = new FsFile(); // It's a Eloquent model...
+$file->id = 'file.txt'; // if not provided, will generated randomly 
 
 $file->write("foobar", $append=true); // 6
 
@@ -86,18 +82,40 @@ EloquentFSStreamWrapper::migrate($db, $connection = 'default');
 ```
 
 For the standalone execution, you need also register the wrapper:
+
 ```php
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 EloquentFSStreamWrapper::register();
 ```
 
+## Deep configuration:
+
+### Different Connection:
+
+If you would to change the connection then on your `AppServiceProvider::register()` method add:
+
+```php
+\JBernavaPrah\EloquentFS\EloquentFS::$connection = 'different_connection';
+```
+
+### Disable Migrations:
+
+If you would to disable the migrations, the on your `AppServiceProvider::register()` method add:
+
+```php
+\JBernavaPrah\EloquentFS\EloquentFS::$runMigrations = False;
+```
+Now you will be in charge to create and run the required migrations. 
+You can see those on `./database/migrations` path.
+
 ## How to help:
-Do a PR, and I will be glad to merge it!
+
+Do a PR, Do all tests and I will be glad to merge it!
 
 ## Missing implementations:
 
 1. The locking file with `flock()`.
-2. Need a performance review. A comparison may by with MongoDB will be super!
-3. It's not production ready.
+2. Need a performance review. A comparison with MongoDB will be super!
+3. Use in some production environments :D
 4. Need a testing review.
 5. `ftruncate()` need to be implemented.

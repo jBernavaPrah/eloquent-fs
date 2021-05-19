@@ -13,8 +13,8 @@ use Illuminate\Database\Migrations\DatabaseMigrationRepository;
 use Illuminate\Database\Migrations\MigrationRepositoryInterface;
 use Illuminate\Database\Migrations\Migrator;
 use JBernavaPrah\EloquentFS\Exception\CorruptFileException;
-use JBernavaPrah\EloquentFS\Models\File;
-use JBernavaPrah\EloquentFS\Models\FileChunk;
+use JBernavaPrah\EloquentFS\Models\FsFile;
+use JBernavaPrah\EloquentFS\Models\FsFileChunk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Throwable;
@@ -42,7 +42,7 @@ class EloquentFSStreamWrapper
      * File Model to use to save on database.
      * @var string
      */
-    public static $defaultFileClass = File::class;
+    public static $defaultFileClass = FsFile::class;
 
     /**
      * Default chunk to save in database.
@@ -52,7 +52,7 @@ class EloquentFSStreamWrapper
 
     /**
      * current file
-     * @var File
+     * @var FsFile
      */
     private $file;
 
@@ -64,7 +64,7 @@ class EloquentFSStreamWrapper
 
     /**
      * Buffered chunk. Will be written on database when: Chunk data is === $defaultChunkSize or fflush() is called.
-     * @var Model|FileChunk|null
+     * @var Model|FsFileChunk|null
      */
     private $bufferedChunk = null;
 
@@ -72,7 +72,7 @@ class EloquentFSStreamWrapper
      * Register the Eloquent stream wrapper.
      *
      */
-    public static function register(?string $connection = null)
+    public static function register()
     {
 
         if (in_array(self::$streamWrapperProtocol, stream_get_wrappers())) {
@@ -80,10 +80,6 @@ class EloquentFSStreamWrapper
         }
 
         stream_wrapper_register(self::$streamWrapperProtocol, static::class, STREAM_IS_URL);
-
-        // todo: test if this work also with extends Models
-        File::resolveConnection($connection);
-        FileChunk::resolveConnection($connection);
 
     }
 
@@ -138,7 +134,7 @@ class EloquentFSStreamWrapper
         return Str::remove(self::$streamWrapperProtocol . "://", $path);
     }
 
-    protected function findOrNewFile($path): File
+    protected function findOrNewFile($path): FsFile
     {
 
         // get id from path
@@ -155,7 +151,7 @@ class EloquentFSStreamWrapper
         }
 
 
-        /** @var File $class */
+        /** @var FsFile $class */
         $class = self::$defaultFileClass;
         $file = (new $class)::findOrNew($id);
         $file->id = $file->id ?: $id;
@@ -231,7 +227,7 @@ class EloquentFSStreamWrapper
     public function unlink(string $path): bool
     {
 
-        return File::where('id', $this->clearPath($path))->delete();
+        return FsFile::where('id', $this->clearPath($path))->delete();
     }
 
     /**
@@ -365,7 +361,7 @@ class EloquentFSStreamWrapper
     {
 
         $id = $this->clearPath($path);
-        $file = File::find($id);
+        $file = FsFile::find($id);
         if (!$file) {
 
             if (!($flags & STREAM_URL_STAT_QUIET)) {
@@ -380,7 +376,7 @@ class EloquentFSStreamWrapper
 
     }
 
-    protected function getStatistics(File $file): array
+    protected function getStatistics(FsFile $file): array
     {
         $stat = [
             0 => 0, 'dev' => 0,
@@ -515,7 +511,7 @@ class EloquentFSStreamWrapper
             ->lazy();
 
         $data = '';
-        /** @var FileChunk $chuck */
+        /** @var FsFileChunk $chuck */
         foreach ($chunks as $chuck) {
 
             if ($index != $chuck->n) {

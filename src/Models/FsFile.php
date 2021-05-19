@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
+use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 
 /**
  * Class File
@@ -23,12 +24,14 @@ use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
  *
  *
  */
-class File extends Model
+class FsFile extends Model
 {
+
+    use HasDynamicConnection;
 
     public $incrementing = false;
 
-    public static $defaultModelFileChunk = FileChunk::class;
+    public static $defaultModelFileChunk = FsFileChunk::class;
 
     protected $guarded = [];
 
@@ -37,28 +40,10 @@ class File extends Model
         'chunk_size' => 'integer',
     ];
 
-//    public static function booted()
-//    {
-//        static::creating(function (File $file) {
-//            $file->id = $file->id ?: Str::random(32);
-//            $file->chunk_size = $file->chunk_size ?: EloquentFSStreamWrapper::$defaultChunkSize;
-//        });
-//    }
-//
-//    /**
-//     *
-//     * @return int|mixed
-//     * @internal
-//     */
-//    protected function getChunkSizeAttribute()
-//    {
-//        return (int)($this->attributes['chunk_size'] ?? EloquentFSStreamWrapper::$defaultChunkSize);
-//    }
-
-    public function getLengthAttribute()
+    protected function getLengthAttribute()
     {
 
-        /** @var FileChunk $lastChunk */
+        /** @var FsFileChunk $lastChunk */
         $lastChunk = $this->chunks()->latest('n')->first();
         if (!$lastChunk) {
             return 0;
@@ -67,7 +52,6 @@ class File extends Model
         return ($this->chunk_size * $lastChunk->n) + strlen($lastChunk->data);
 
     }
-
 
     /**
      * todo: Implement filter by length

@@ -6,7 +6,7 @@ namespace JBernavaPrah\EloquentFS\Tests;
 
 use Carbon\Carbon;
 use ErrorException;
-use JBernavaPrah\EloquentFS\Models\File;
+use JBernavaPrah\EloquentFS\Models\FsFile;
 
 
 class EloquentFSStreamWrapperTest extends TestCase
@@ -58,13 +58,13 @@ class EloquentFSStreamWrapperTest extends TestCase
         Carbon::setTestNow(Carbon::now());
 
         touch('efs://some_file.php');
-        $this->assertEquals(1, File::count());
-        $this->assertEquals(Carbon::now()->timestamp, File::first()->updated_at->timestamp);
+        $this->assertEquals(1, FsFile::count());
+        $this->assertEquals(Carbon::now()->timestamp, FsFile::first()->updated_at->timestamp);
 
 
         touch('efs://some_file.php', Carbon::now()->addSeconds(15)->timestamp);
-        $this->assertEquals(1, File::count());
-        $this->assertEquals(Carbon::now()->addSeconds(15)->timestamp, File::first()->updated_at->timestamp);
+        $this->assertEquals(1, FsFile::count());
+        $this->assertEquals(Carbon::now()->addSeconds(15)->timestamp, FsFile::first()->updated_at->timestamp);
 
     }
 
@@ -107,7 +107,7 @@ class EloquentFSStreamWrapperTest extends TestCase
         // reopen it..
         fopen('efs://test_file.txt', $mode);
 
-        $file = File::first();
+        $file = FsFile::first();
         $this->assertEquals(0, $file->length);
         $this->assertEquals(0, $file->chunks()->count());
 
@@ -127,7 +127,7 @@ class EloquentFSStreamWrapperTest extends TestCase
         // reopen it..
         fopen('efs://test_file.txt', $mode);
 
-        $file = File::first();
+        $file = FsFile::first();
         $this->assertEquals(6, $file->length);
         $this->assertEquals(1, $file->chunks()->count());
 
@@ -153,9 +153,9 @@ class EloquentFSStreamWrapperTest extends TestCase
     {
         file_put_contents('efs://test_file.txt', 'foobar');
 
-        $this->assertEquals(1, File::count());
+        $this->assertEquals(1, FsFile::count());
         $this->assertTrue(unlink('efs://test_file.txt'));
-        $this->assertEquals(0, File::count());
+        $this->assertEquals(0, FsFile::count());
 
     }
 

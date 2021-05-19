@@ -13,14 +13,13 @@ return new class extends Migration {
     public function up()
     {
 
-        Schema::create('files', function (Blueprint $table) {
+        Schema::create('fs_files', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->integer('chunk_size');
 
             $table->jsonb('metadata')->nullable();
 
             $table->timestamps();
-            $table->softDeletes();
 
             $table->index('metadata');
 
