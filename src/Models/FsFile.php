@@ -85,7 +85,7 @@ class FsFile extends Model
 
     protected function getPathFile(): string
     {
-        return EloquentFSStreamWrapper::$streamWrapperProtocol . "://context";
+        return EloquentFSStreamWrapper::$streamWrapperProtocol . "://$this->id";
     }
 
     /**
