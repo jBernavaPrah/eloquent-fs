@@ -18,7 +18,7 @@ return new class extends Migration {
 
             $table->integer('n');
             $table->string('fs_file_id');
-            $table->binary('data');
+            $table->text('data');
 
             $table->foreign('fs_file_id')
                 ->references('id')

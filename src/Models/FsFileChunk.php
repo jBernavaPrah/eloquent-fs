@@ -5,7 +5,6 @@ namespace JBernavaPrah\EloquentFS\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use JBernavaPrah\EloquentFS\Casts\Utf8Cast;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 
 /**
@@ -34,7 +33,6 @@ class FsFileChunk extends Model
 
     protected $casts = [
         'n' => 'integer',
-        'data' => Utf8Cast::class
     ];
 
 

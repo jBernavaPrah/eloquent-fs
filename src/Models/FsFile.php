@@ -103,7 +103,7 @@ class FsFile extends Model
         return file_get_contents($this->getPathFile(), false, $this->context(), ...func_get_args());
     }
 
-    public function write($data, $append = true)
+    public function write($data, $append = false)
     {
         return file_put_contents($this->getPathFile(), $data, $append ? FILE_APPEND : 0, $this->context());
     }
