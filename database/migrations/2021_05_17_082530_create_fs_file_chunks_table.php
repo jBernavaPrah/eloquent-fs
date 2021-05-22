@@ -14,13 +14,13 @@ return new class extends Migration {
     {
 
         Schema::create('fs_file_chunks', function (Blueprint $table) {
-            $table->string('id')->primary();
+            $table->uuid('id')->primary();
 
             $table->integer('n');
             $table->binary('data');
 
-            $table->binary('fs_file_id');
-            $table->foreign('fs_file_id')
+
+            $table->foreignUuid('fs_file_id')
                 ->references('id')
                 ->on('fs_files')
                 ->cascadeOnDelete()

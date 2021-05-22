@@ -12,7 +12,6 @@ use JBernavaPrah\EloquentFS\Models\FsFile;
 use JBernavaPrah\EloquentFS\Models\FsFileChunk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Throwable;
 use function stream_wrapper_unregister;
 
 /**
@@ -93,10 +92,6 @@ class EloquentFSStreamWrapper
 
         $this->mode = $mode;
         $this->file = $this->findOrNewFile($path);
-
-        if (!$this->file->id) {
-            throw new CorruptFileException('file.id is not an string');
-        }
 
         if (!$this->file->chunk_size || $this->file->chunk_size < 0) {
             throw new CorruptFileException('file.chunk_size is not an integer >= 1');
@@ -228,7 +223,7 @@ class EloquentFSStreamWrapper
 
         $this->bufferWrite = $this->file
             ->chunks()
-            ->firstOrNew(['n' => (integer)$position], ['id' => Str::random(64)]);
+            ->firstOrNew(['n' => (integer)$position]);
 
         return $this->bufferWrite;
 
@@ -473,13 +468,13 @@ class EloquentFSStreamWrapper
     {
 
         // get id from path
-        $id = $this->clearPath($path) ?: Str::random(32);
+        $id = $this->clearPath($path);
 
         if ($this->context) {
             $context = stream_context_get_options($this->context);
             $file = $context[self::$streamWrapperProtocol]['file'] ?? null;
             if ($file) {
-                $file->id = $file->id ?: $id;
+                $file->id = $id ?: $file->id;
                 $file->chunk_size = $file->chunk_size ?: EloquentFS::$defaultChunkSize;
                 return $file;
             }
@@ -489,7 +484,7 @@ class EloquentFSStreamWrapper
         /** @var FsFile $class */
         $class = EloquentFS::$defaultFileClass;
         $file = (new $class)::findOrNew($id);
-        $file->id = $file->id ?: $id;
+        $file->id = $id ?: $file->id;
         $file->chunk_size = $file->chunk_size ?: EloquentFS::$defaultChunkSize;
         return $file;
 

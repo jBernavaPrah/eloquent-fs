@@ -7,9 +7,10 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use JBernavaPrah\EloquentBinaryCast\BinaryCast;
+use JBernavaPrah\EloquentBinaryCast\Casts\BinaryCast;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
+use JBernavaPrah\EloquentFS\Traits\HasUuid;
 
 /**
  * Class File
@@ -29,15 +30,13 @@ class FsFile extends Model
 {
 
     use HasDynamicConnection;
-
-    public $incrementing = false;
+    use HasUuid;
 
     public static $defaultModelFileChunk = FsFileChunk::class;
 
     protected $guarded = [];
 
     protected $casts = [
-        'id' => BinaryCast::class,
         'metadata' => 'json',
         'chunk_size' => 'integer',
     ];

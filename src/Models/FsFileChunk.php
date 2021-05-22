@@ -5,8 +5,9 @@ namespace JBernavaPrah\EloquentFS\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use JBernavaPrah\EloquentBinaryCast\BinaryCast;
+use JBernavaPrah\EloquentBinaryCast\Casts\BinaryCast;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
+use JBernavaPrah\EloquentFS\Traits\HasUuid;
 
 /**
  * Class FileChuck
@@ -24,17 +25,15 @@ class FsFileChunk extends Model
 {
 
     use HasDynamicConnection;
+    use HasUuid;
 
     public $timestamps = false;
-    public $incrementing = false;
 
     protected $guarded = [];
 
     static string $defaultFileModel = FsFile::class;
 
     protected $casts = [
-        'id' => BinaryCast::class,
-        'fs_file_id' => BinaryCast::class,
         'n' => 'integer',
         'data' => BinaryCast::class
     ];

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4e3c3ed019065ca50e99228c708d7e43",
+    "content-hash": "aaaf7b6f4c08ce12d7dc458c3476fe5f",
     "packages": [
         {
             "name": "brick/math",
@@ -438,12 +438,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/jBernavaPrah/eloquent-binary-cast.git",
-                "reference": "11927174c56168bf1a38442c4d98de5664160a31"
+                "reference": "d016e835b6dcb7f28ca6989d5a0bb172070ed91c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jBernavaPrah/eloquent-binary-cast/zipball/11927174c56168bf1a38442c4d98de5664160a31",
-                "reference": "11927174c56168bf1a38442c4d98de5664160a31",
+                "url": "https://api.github.com/repos/jBernavaPrah/eloquent-binary-cast/zipball/d016e835b6dcb7f28ca6989d5a0bb172070ed91c",
+                "reference": "d016e835b6dcb7f28ca6989d5a0bb172070ed91c",
                 "shasum": ""
             },
             "require": {
@@ -473,11 +473,17 @@
                 }
             ],
             "description": "Cast correctly binary data (mainly for PostgreSQL)",
+            "keywords": [
+                "binary",
+                "cast",
+                "eloquent",
+                "laravel"
+            ],
             "support": {
                 "issues": "https://github.com/jBernavaPrah/eloquent-binary-cast/issues",
-                "source": "https://github.com/jBernavaPrah/eloquent-binary-cast/tree/master"
+                "source": "https://github.com/jBernavaPrah/eloquent-binary-cast"
             },
-            "time": "2021-05-22T09:04:52+00:00"
+            "time": "2021-05-22T13:56:50+00:00"
         },
         {
             "name": "laravel/framework",
@@ -5356,16 +5362,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "9.5.x-dev",
+            "version": "9.5.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "97a3828be5ef239dc80bafa88d7519ca473a21dd"
+                "reference": "c73c6737305e779771147af66c96ca6a7ed8a741"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/97a3828be5ef239dc80bafa88d7519ca473a21dd",
-                "reference": "97a3828be5ef239dc80bafa88d7519ca473a21dd",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/c73c6737305e779771147af66c96ca6a7ed8a741",
+                "reference": "c73c6737305e779771147af66c96ca6a7ed8a741",
                 "shasum": ""
             },
             "require": {
@@ -5443,7 +5449,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/9.5"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/9.5.4"
             },
             "funding": [
                 {
@@ -5455,7 +5461,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2021-05-21T11:48:38+00:00"
+            "time": "2021-03-23T07:16:29+00:00"
         },
         {
             "name": "psr/http-message",
@@ -7179,8 +7185,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "jbernavaprah/eloquent-binary-cast": 20,
-        "phpunit/phpunit": 20
+        "jbernavaprah/eloquent-binary-cast": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
