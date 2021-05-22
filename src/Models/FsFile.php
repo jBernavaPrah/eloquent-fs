@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use JBernavaPrah\EloquentBinaryCast\BinaryCast;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 
@@ -36,6 +37,7 @@ class FsFile extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'id' => BinaryCast::class,
         'metadata' => 'json',
         'chunk_size' => 'integer',
     ];

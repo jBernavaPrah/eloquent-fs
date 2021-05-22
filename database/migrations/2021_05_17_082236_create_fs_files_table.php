@@ -14,8 +14,10 @@ return new class extends Migration {
     {
 
         Schema::create('fs_files', function (Blueprint $table) {
-            $table->string('id')->primary();
+            $table->binary('id')->primary();
+
             $table->integer('chunk_size');
+            $table->integer('size')->default(0);
 
             $table->jsonb('metadata')->nullable();
 

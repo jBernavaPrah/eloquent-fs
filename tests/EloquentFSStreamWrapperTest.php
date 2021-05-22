@@ -17,11 +17,10 @@ class EloquentFSStreamWrapperTest extends TestCase
     {
 
 
-        $this->expectException(ErrorException::class);
         file_put_contents('efs://some_file.txt', 'foobar');
 
         $stream = fopen('efs://some_file.txt', 'r');
-        ftruncate($stream, 4);
+        $this->assertFalse(ftruncate($stream, 4));
 //
 //        /** @var File $file */
 //        $file = File::first();
@@ -87,9 +86,8 @@ class EloquentFSStreamWrapperTest extends TestCase
 
         file_put_contents('efs://test_file.txt', 'foobar');
 
-        $this->expectException(ErrorException::class);
         $stream = fopen('efs://some_file.php', $mode);
-        fread($stream, 10);
+        $this->assertFalse(fread($stream, 10));
         fclose($stream);
 
     }
@@ -282,14 +280,13 @@ class EloquentFSStreamWrapperTest extends TestCase
 
     }
 
+
     function testBigFileMD5()
     {
 
-        $strLength = 300000;
-        $resource = tmpfile();
-        $tmpFilename = stream_get_meta_data($resource)['uri'];
+        $strLength = 3000000;
 
-        $data = function ($length) {
+        $generateRandomData = function ($length) {
             $data = '';
             while ($length > 0) {
                 --$length;
@@ -297,21 +294,12 @@ class EloquentFSStreamWrapperTest extends TestCase
             }
             return $data;
         };
-        $data = $data($strLength);
-        file_put_contents($tmpFilename, $data);
+        $data = $generateRandomData($strLength);
 
-        copy($tmpFilename, 'efs://test_file.txt');
+        $this->assertEquals($strLength, file_put_contents('efs://test_file.txt', $data));
+        $readFile =file_get_contents('efs://test_file.txt');
 
-        $savedData = file_get_contents('efs://test_file.txt');
-        $this->assertEquals($strLength, strlen($savedData));
-
-        foreach (str_split($savedData) as $key => $char) {
-            $this->assertEquals($data[$key], $char, "Not Equal on character: $key");
-        }
-
-        $this->assertEquals(md5($data), md5($savedData));
-        $this->assertEquals($data, $savedData);
-
+        $this->assertEquals(md5($data), md5($readFile));
 
     }
 
@@ -326,6 +314,7 @@ class EloquentFSStreamWrapperTest extends TestCase
 
         $stream = fopen('efs://some_file.txt', $mode);
         fwrite($stream, 'EFGH');
+        fflush($stream);
 
         $this->assertEquals('AB', fread($stream, 2));
     }
