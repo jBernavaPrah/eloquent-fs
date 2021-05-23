@@ -23,8 +23,16 @@ class EloquentFS
      */
     public static $defaultChunkSize = 261120;
 
+    /**
+     * Run migrations
+     * @var bool
+     */
     public static bool $runMigrations = True;
 
+    /**
+     * Change the connection used for Migrations and FsFile/FsFileChunk Models
+     * @var string|null
+     */
     public static ?string $connection = null;
 
     /**
@@ -45,6 +53,7 @@ class EloquentFS
      * @param string $connection
      * @param array $paths
      * @throws BindingResolutionException
+     * @deprecated
      */
     public static function migrate(Manager $manager, string $connection = 'default', array $paths = [__DIR__ . '/../database/migrations'])
     {

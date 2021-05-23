@@ -4,10 +4,11 @@ namespace JBernavaPrah\EloquentFS\Models;
 
 
 use Carbon\Carbon;
+use Database\Factories\FsFileFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use JBernavaPrah\EloquentBinaryCast\Casts\BinaryCast;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 use JBernavaPrah\EloquentFS\Traits\HasUuid;
@@ -31,6 +32,12 @@ class FsFile extends Model
 
     use HasDynamicConnection;
     use HasUuid;
+    use HasFactory;
+
+    protected static function newFactory()
+    {
+        return new FsFileFactory();
+    }
 
     public static $defaultModelFileChunk = FsFileChunk::class;
 
