@@ -57,16 +57,6 @@ class ModelTest extends TestCase
 
     }
 
-    function testFactorySize()
-    {
-
-        /** @var FsFile $file */
-        $file = FsFile::factory()->size(5)->create();
-        $this->assertEquals(5, $file->length);
-
-
-    }
-
     function testUploadedFileFromFake()
     {
 

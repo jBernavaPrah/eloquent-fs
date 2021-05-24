@@ -33,11 +33,4 @@ class FsFileFactory extends Factory
         ];
     }
 
-    public function size(int $size)
-    {
-        return $this->afterMaking(function (FsFile $file) use ($size) {
-            $file->write(str_repeat('a', $size));
-        });
-    }
-
 }
