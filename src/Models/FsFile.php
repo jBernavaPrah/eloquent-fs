@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 use JBernavaPrah\EloquentFS\Traits\HasUuid;
@@ -111,8 +113,18 @@ class FsFile extends Model
         return file_get_contents($this->getPathFile(), false, $this->context(), ...func_get_args());
     }
 
+    /**
+     * @param File|UploadedFile|string $data - Can be string File or UploadFile
+     * @param false $append
+     * @return false|int
+     */
     public function write($data, $append = false)
     {
+
+        if ($data instanceof File | $data instanceof UploadedFile) {
+            $data = fopen($data->path(), 'r');
+        }
+
         return file_put_contents($this->getPathFile(), $data, $append ? FILE_APPEND : 0, $this->context());
     }
 

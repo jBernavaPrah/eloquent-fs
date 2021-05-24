@@ -5,6 +5,7 @@ namespace JBernavaPrah\EloquentFS\Tests;
 
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use JBernavaPrah\EloquentFS\EloquentFS;
 use JBernavaPrah\EloquentFS\Models\FsFile;
@@ -68,7 +69,7 @@ class ModelTest extends TestCase
 
     }
 
-    function testFileFromFake()
+    function testUploadedFileFromFake()
     {
 
         $file = UploadedFile::fake()
@@ -76,12 +77,11 @@ class ModelTest extends TestCase
             ->size(261100);
 
         $fsFile = new FsFile();
-        $fsFile->write($file->get());
+        $fsFile->write($file);
 
         $this->assertEquals($file->get(), $fsFile->read());
         $this->assertNotEmpty($fsFile->id);
 
     }
-
 
 }
