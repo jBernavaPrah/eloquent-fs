@@ -41,7 +41,8 @@
   },
   "autoload": {
     "psr-4": {
-      "JBernavaPrah\\EloquentFS\\": "src"
+      "JBernavaPrah\\EloquentFS\\": "src",
+      "JBernavaPrah\\EloquentFS\\Database\\Factories\\": "database/factories/"
     }
   },
   "extra": {
@@ -54,7 +55,7 @@
   "autoload-dev": {
     "psr-4": {
       "JBernavaPrah\\EloquentFS\\Tests\\": "tests",
-      "JBernavaPrah\\EloquentFS\\Database\\Factories\\": "database/factories/"
+
     }
   },
   "scripts": {
