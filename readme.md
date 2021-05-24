@@ -1,8 +1,9 @@
 # EloquentFS
 
-A filesystem wrapper that use eloquent, inspired by GridFS (Mongo)
+A laravel/lumen filesystem wrapper that use eloquent as datastore, inspired by GridFS (MongoDB)
 
 ### Attention: it's not production ready!
+### Attention 2: It's under development!
 
 ## Install:
 
@@ -22,7 +23,7 @@ This will use the standard laravel migrations, therefore will be also used the d
 To use this wrapper, you need to prefix the paths with `efs://`. The path will be used as `id` of the file on database.
 
 ```php
-touch('efs://file.txt');
+touch('efs://file.txt'); // file.txt will be ID of this file.
 file_put_contents('efs://file.txt', "foobar\n");
 echo file_get_contents('efs://file.txt'); // "foobar\n"
 copy('efs://file.txt', 'efs://other_file.txt');
@@ -31,15 +32,15 @@ unlink('efs://file.txt');
 unlink('efs://other_file.txt');
 ```
 
-### Use with Eloquent model
+### With eloquent model:
 
-You can also use directly the Eloquent Model (or extend it) shipped with EloquentFS.
+You can also use directly the Eloquent Model shipped with EloquentFS.
 
 ```php
 use JBernavaPrah\EloquentFS\Models\FsFile;
 
-$file = new FsFile(); // It's a Eloquent model...
-$file->id = 'file.txt'; // if not provided, will generated randomly 
+$file = new FsFile();
+$file->id = 'file.txt'; // if not provided, will generated as uuid 
 
 $file->write("foobar", $append=true); // 6
 
@@ -50,43 +51,8 @@ $file->write("foobar", $append=true); // 6
 $file->read(); // foobarfoobar
 
 $file->delete(); // Delete
-
-
 ```
 
-### Standalone:
-
-You need to have the database manager configured.
-
-```php
-// configure your DB manager
-use Illuminate\Container\Container;
-use Illuminate\Database\Capsule\Manager;
-use Illuminate\Events\Dispatcher;
-use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
-
-$db = new Manager();
-$db->addConnection( [
-        'driver' => 'sqlite',
-        'database' => ':memory:',
-        'prefix' => '',
-    ]);
-$db->setAsGlobal();
-$db->setEventDispatcher(new Dispatcher(new Container()));
-$db->bootEloquent();
-
-// This command will create the migrations table
-// and call the required migrations on database/migrations directory.
-EloquentFSStreamWrapper::migrate($db, $connection = 'default');
-
-```
-
-For the standalone execution, you need also register the wrapper:
-
-```php
-use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
-EloquentFSStreamWrapper::register();
-```
 
 ## Deep configuration:
 
@@ -106,7 +72,7 @@ If you would to disable the migrations, the on your `AppServiceProvider::registe
 \JBernavaPrah\EloquentFS\EloquentFS::$runMigrations = False;
 ```
 Now you will be in charge to create and run the required migrations. 
-You can see those on `./database/migrations` path.
+You can see those migrations on `./database/migrations` path.
 
 ## How to help:
 

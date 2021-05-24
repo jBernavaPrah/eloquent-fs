@@ -1,8 +1,9 @@
 {
   "name": "jbernavaprah/eloquent-fs",
-  "description": "Eloquent FileSystem, inspired by Mongo GridFS",
+  "description": "A laravel/lumen FileSystem that use Eloquent as datastore, inspired by GridFS (MongoDB)",
   "keywords": [
     "laravel",
+    "lumen",
     "eloquent",
     "filesystem",
     "gridfs",
