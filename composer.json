@@ -54,7 +54,7 @@
   "autoload-dev": {
     "psr-4": {
       "JBernavaPrah\\EloquentFS\\Tests\\": "tests",
-      "Database\\Factories\\": "database/factories/"
+      "JBernavaPrah\\EloquentFS\\Database\\Factories\\": "database/factories/"
     }
   },
   "scripts": {

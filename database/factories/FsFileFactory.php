@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Factories;
+namespace JBernavaPrah\EloquentFS\Database\Factories;
 
 
 use Illuminate\Database\Eloquent\Factories\Factory;

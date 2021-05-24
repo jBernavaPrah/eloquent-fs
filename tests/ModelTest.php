@@ -4,8 +4,6 @@
 namespace JBernavaPrah\EloquentFS\Tests;
 
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use JBernavaPrah\EloquentFS\EloquentFS;
 use JBernavaPrah\EloquentFS\Models\FsFile;

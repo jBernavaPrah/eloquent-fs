@@ -4,13 +4,13 @@ namespace JBernavaPrah\EloquentFS\Models;
 
 
 use Carbon\Carbon;
-use Database\Factories\FsFileFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
+use JBernavaPrah\EloquentFS\Database\Factories\FsFileFactory;
 use JBernavaPrah\EloquentFS\EloquentFSStreamWrapper;
 use JBernavaPrah\EloquentFS\Traits\HasDynamicConnection;
 use JBernavaPrah\EloquentFS\Traits\HasUuid;
