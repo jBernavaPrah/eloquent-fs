@@ -128,5 +128,18 @@ class FsFile extends Model
         return file_put_contents($this->getPathFile(), $data, $append ? FILE_APPEND : 0, $this->context());
     }
 
+    /**
+     * @param File|UploadedFile|string $data - Can be string, File or UploadFile
+     * @return FsFile|bool
+     */
+    public static function put($data)
+    {
+        $file = new self;
+        if ($file->write($data) === false) {
+            return false;
+        }
+        return $file;
+    }
+
 
 }
