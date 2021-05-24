@@ -23,6 +23,7 @@ use JBernavaPrah\EloquentFS\Traits\HasUuid;
  * @property-read  integer $length
  * @property  integer $chunk_size
  * @property mixed|null $metadata
+ * @property-read string $path
  *
  * @property Carbon $created_at
  * @property Carbon $updated_at
@@ -93,7 +94,7 @@ class FsFile extends Model
     }
 
 
-    protected function getPathFile(): string
+    public function getPathAttribute(): string
     {
         return EloquentFSStreamWrapper::$streamWrapperProtocol . "://$this->id";
     }
@@ -105,12 +106,12 @@ class FsFile extends Model
      */
     public function stream($mode)
     {
-        return fopen($this->getPathFile(), $mode, false, $this->context());
+        return fopen($this->path, $mode, false, $this->context());
     }
 
     public function read(int $offset = 0, int $length = null): string
     {
-        return file_get_contents($this->getPathFile(), false, $this->context(), ...func_get_args());
+        return file_get_contents($this->path, false, $this->context(), ...func_get_args());
     }
 
     /**
@@ -125,7 +126,7 @@ class FsFile extends Model
             $data = fopen($data->path(), 'r');
         }
 
-        return file_put_contents($this->getPathFile(), $data, $append ? FILE_APPEND : 0, $this->context());
+        return file_put_contents($this->path, $data, $append ? FILE_APPEND : 0, $this->context());
     }
 
     /**
